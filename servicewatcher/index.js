@@ -1,12 +1,16 @@
 const fs = require('fs');
 
-const kagi = require('kagi'),
-	    simpleGit = require('simple-git')();
+const simpleGit = require('simple-git')();
+      execSh = require('exec-sh');
+
+const Instance = require('../util/instance');
+      Service = require('../util/service');
 
 class ServiceWatcher {
-	constructor(config, onInit) {
+	constructor(config, defaultServiceSettings, onInit) {
 		this.remoteURL = `https://${config.username}:${config.password}@github.com`;
 		this.servicePath = `${__dirname}/services`;
+		this.defaultServiceSettings = defaultServiceSettings;
 		this.services = new Map();
 
 		this.checkForExistingServices().then(() => {
@@ -31,11 +35,15 @@ class ServiceWatcher {
 				possibleServices.push(new Promise((resolve) => {
 					simpleGit.cwd(`${this.servicePath}/${author}/${repo}`).checkIsRepo((err, isRepo) => {
 						if (isRepo) {
-							this.services.set(`${author}/${repo}`, {});
+							this.services.set(`${author}/${repo}`, new Service(`${author}/${repo}`, new Instance(this.defaultServiceSettings[`${author}/${repo}`], `${this.servicePath}/${author}/${repo}`)));
+							execSh(this.defaultServiceSettings[`${author}/${repo}`].install, {cwd: `${this.servicePath}/${author}/${repo}`}, err => {
+								if (err) console.log(err);
+								resolve();
+							});
 						} else {
 							fs.rmdirSync(`${this.servicePath}/${author}/${repo}`);
+							resolve();
 						}
-						resolve();
 					});
 				}));
 			}
@@ -44,25 +52,45 @@ class ServiceWatcher {
 		return Promise.all(possibleServices);
 	}
 
-	cloneService(gitRepo) {
-		if (!this.services.has(`${gitRepo}`)) {
-			console.log(`Cloning ${gitRepo}`);
-			simpleGit.clone(`${this.remoteURL}/${gitRepo}`, `${this.servicePath}/${gitRepo}`, (err) => {
-				if (err) console.log(err);
-				console.log(`Cloned ${gitRepo}`);
-			});
+	getNewestRepo(gitRepo) {
+		if (!this.services.has(gitRepo)) {
+			return this.cloneService(gitRepo);
 		} else {
-			console.log(`${gitRepo} already cloned...`);
-			this.pullService(gitRepo);
+			console.log(`${gitRepo} already cloned`);
+			return this.pullService(gitRepo);
 		}
 	}
 
+	cloneService(gitRepo) {
+		console.log(`Cloning ${gitRepo}...`);
+		return new Promise((resolve, reject) => {
+			simpleGit.clone(`${this.remoteURL}/${gitRepo}`, `${this.servicePath}/${gitRepo}`, (err) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+
+				simpleGit.exec(this.defaultServiceSettings[`${gitRepo}`].install);
+				this.services.set(`${gitRepo}`, new Service(`${gitRepo}`, new Instance(this.defaultServiceSettings[`${gitRepo}`])));
+
+				console.log(`Cloned ${gitRepo}`);
+				resolve();
+			});
+		});
+	}
+
 	pullService(gitRepo) {
-		console.log(`Pulling ${gitRepo}`);
-		simpleGit.cwd(`${this.servicePath}/${gitRepo}`).pull((err, pullSummary) => {
-			if (err) console.log(err);
-			console.log(pullSummary);
-			console.log(`Pulled ${gitRepo}`);
+		console.log(`Pulling ${gitRepo}...`);
+		return new Promise((resolve, reject) => {
+			simpleGit.cwd(`${this.servicePath}/${gitRepo}`).pull((err) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+
+				console.log(`Pulled ${gitRepo}`);
+				resolve();
+			});
 		});
 	}
 }

@@ -1,4 +1,3 @@
-const uptimeAPI = require('../api/uptime');
 const { generateV4 } = require('./generateuuid');
 
 class Service {
@@ -24,11 +23,17 @@ class Service {
 
 	createInstance(settings) {
 		const instanceId = generateV4();
-		this.instances.set(instanceId, this.instance.create(instanceId, settings));
+		const instance = this.instance.create(settings);
+		this.instances.set(instanceId, instance);
+		instance.start();
 	}
 
 	restartInstance(instanceId) {
 		this.instances.get(instanceId).restart();
+	}
+
+	stopInstance(instanceId) {
+		this.instances.get(instanceId).stop();
 	}
 
 	getInstance(instanceId) {
