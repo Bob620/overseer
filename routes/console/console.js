@@ -5,7 +5,7 @@ class ConsoleRouter {
 		this.router = router;
 
 		this.router.get('/', async (req, res) => {
-			res.send(serviceWatcher.listServices());
+			res.send('');
 		});
 	}
 }

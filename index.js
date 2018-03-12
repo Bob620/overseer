@@ -6,19 +6,17 @@ const webserver = require('./webserver/bin/www');
 
 // Webserver api routes
 const apiRouter = require('./routes/api/api');
-const ServicesRouter = require('./routes/api/services');
-const ConsoleRouter = require('./routes/api/console');
+const ServicesAPIRouter = require('./routes/api/services');
+const ConsoleAPIRouter = require('./routes/api/console');
 
-// Service Imports
-const Service = require('./util/service');
-const Instance = require('./util/instance');
+// Webserver console routes
+const ConsoleRouter = require('./routes/console/console');
 
 // Service Watcher
 const ServiceWatcher = require('./servicewatcher/index');
 const serviceWatcher = new ServiceWatcher(config.gitRemote, config.defaultServiceSettings, () => {
 	serviceWatcher.getNewestRepo('bob620/waifusite').then(() => {
 		const waifusite = serviceWatcher.services.get('bob620/waifusite');
-		console.log(waifusite);
 
 		waifusite.createInstance();
 
@@ -35,10 +33,8 @@ const serviceWatcher = new ServiceWatcher(config.gitRemote, config.defaultServic
 	});
 });
 
-let services = [
-
-];
-
-apiRouter.use('/console', new ConsoleRouter().router);
-apiRouter.use('/services', new ServicesRouter(services).router);
+apiRouter.use('/console', new ConsoleAPIRouter(serviceWatcher).router);
+apiRouter.use('/services', new ServicesAPIRouter([]).router);
 webserver.use('/api', apiRouter);
+
+webserver.use('/console', new ConsoleRouter().router);

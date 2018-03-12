@@ -5,8 +5,6 @@ const express = require('express'),
 	    cookieParser = require('cookie-parser'),
 	    bodyParser = require('body-parser');
 
-const apiRouter = require('../routes/api/api.js');
-
 const app = express();
 
 // view engine setup

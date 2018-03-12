@@ -23,17 +23,9 @@ class Service {
 
 	createInstance(settings) {
 		const instanceId = generateV4();
-		const instance = this.instance.create(settings);
+		const instance = this.instance.create(instanceId, settings);
 		this.instances.set(instanceId, instance);
 		instance.start();
-	}
-
-	restartInstance(instanceId) {
-		this.instances.get(instanceId).restart();
-	}
-
-	stopInstance(instanceId) {
-		this.instances.get(instanceId).stop();
 	}
 
 	getInstance(instanceId) {
@@ -44,9 +36,7 @@ class Service {
 		let instancesList = [];
 
 		this.instances.forEach((instanceId, instance) => {
-			instancesList.push({
-				instanceId
-			});
+			instancesList.push(instance);
 		});
 
 		return instancesList;
