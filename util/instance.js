@@ -84,8 +84,12 @@ class InstanceProcess {
 
 	stop() {
 		if (this.status === 'running') {
-			// This is the only working way on windows
-			spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
+			if (process.platform === "win32") {
+				// This is the only working way on windows ( ￣＾￣)
+				spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
+			} else {
+				this.process.kill();
+			}
 		}
 	}
 }
