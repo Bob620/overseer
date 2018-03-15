@@ -1,16 +1,14 @@
 const fs = require('fs');
 
 const simpleGit = require('simple-git')();
-      execSh = require('exec-sh');
 
-const Instance = require('../util/instance');
-      Service = require('../util/service');
+const Service = require('../util/service');
 
-class ServiceWatcher {
-	constructor(config, defaultServiceSettings, onInit) {
+class GitControl {
+	constructor(config, defaultSettings, onInit) {
 		this.remoteURL = `https://${config.username}:${config.password}@github.com`;
 		this.servicePath = `${__dirname}/services`;
-		this.defaultServiceSettings = defaultServiceSettings;
+		this.defaultSettings = defaultSettings;
 		this.services = new Map();
 
 		this.checkForExistingServices().then(() => {
@@ -21,8 +19,7 @@ class ServiceWatcher {
 	checkForExistingServices() {
 		try {
 			fs.mkdirSync(this.servicePath);
-		} catch (err) {
-		}
+		} catch (err) {}
 
 		let possibleServices = [];
 
@@ -36,7 +33,7 @@ class ServiceWatcher {
 				possibleServices.push(new Promise((resolve) => {
 					simpleGit.cwd(`${this.servicePath}/${gitRepo}`).checkIsRepo((err, isRepo) => {
 						if (isRepo) {
-							this.services.set(`${gitRepo}`, new Service(`${gitRepo}`, new Instance(`${gitRepo}`, this.defaultServiceSettings[`${gitRepo}`], `${this.servicePath}/${gitRepo}`)));
+							this.services.set(gitRepo, new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo]));
 							resolve();
 						} else {
 							fs.rmdirSync(`${this.servicePath}/${gitRepo}`);
@@ -54,7 +51,7 @@ class ServiceWatcher {
 		if (!this.services.has(gitRepo)) {
 			return this.cloneService(gitRepo);
 		} else {
-			return this.pullService(gitRepo);
+			return this.services.get(gitRepo).gitPull();
 		}
 	}
 
@@ -67,36 +64,13 @@ class ServiceWatcher {
 					return;
 				}
 
-				simpleGit.exec(this.defaultServiceSettings[`${gitRepo}`].install);
-				this.services.set(`${gitRepo}`, new Service(`${gitRepo}`, new Instance(`${gitRepo}`, this.defaultServiceSettings[`${gitRepo}`], `${this.servicePath}/${gitRepo}`)));
+				const service = new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo]);
+				this.services.set(gitRepo, service);
 
 				console.log(`Cloned ${gitRepo}`);
-				console.log('Updating dependencies...\n');
-
-				execSh(this.defaultServiceSettings[`${gitRepo}`].install, {cwd: `${this.servicePath}/${gitRepo}`}, err => {
-					if (err) console.log(err);
+				service.updateDependencies().then(() => {
 					resolve();
-				});
-			});
-		});
-	}
-
-	pullService(gitRepo) {
-		console.log(`\nPulling ${gitRepo}...`);
-		return new Promise((resolve, reject) => {
-			simpleGit.cwd(`${this.servicePath}/${gitRepo}`).pull((err) => {
-				if (err) {
-					reject(err);
-					return;
-				}
-
-				console.log(`Pulled ${gitRepo}`);
-				console.log('Updating dependencies...\n');
-
-				execSh(this.defaultServiceSettings[`${gitRepo}`].install, {cwd: `${this.servicePath}/${gitRepo}`}, err => {
-					if (err) console.log(err);
-					resolve();
-				});
+				})
 			});
 		});
 	}
@@ -112,4 +86,4 @@ class ServiceWatcher {
 	}
 }
 
-module.exports = ServiceWatcher;
+module.exports = GitControl;

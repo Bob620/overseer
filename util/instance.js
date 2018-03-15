@@ -1,28 +1,15 @@
-const execSh = require('exec-sh');
-const spawn = require('child_process').spawn;
+const execSh = require('exec-sh'),
+      spawn = require('child_process').spawn;
 
 class Instance {
-	constructor(serviceName, defaultSettings, path) {
-		this.ServiceStartCommand = defaultSettings.start;
-		this.defaultSettings = defaultSettings;
-		this.path = path;
-		this.serviceName = serviceName;
-	}
-
-	create(instanceId, settings=this.defaultSettings, respawn=true) {
-		return new InstanceProcess(instanceId, this.serviceName, this.ServiceStartCommand, this.path, settings.args, respawn);
-	}
-}
-
-class InstanceProcess {
-	constructor(instanceId, serviceName, serviceStartCommand, path, args, respawn) {
+	constructor(instanceId, serviceName, servicePath, settings) {
 		this.id = instanceId;
 		this.serviceName = serviceName;
 		this.status = 'stopped';
-		this.respawn = respawn;
-		this.ServiceStartCommand = serviceStartCommand;
-		this.path = path;
-		this.args = args;
+		this.respawn = settings.respawn;
+		this.commands = settings.commands;
+		this.servicePath = servicePath;
+		this.args = settings.args;
 		this.process = undefined;
 	}
 
@@ -61,7 +48,7 @@ class InstanceProcess {
 
 	start() {
 		if (this.status === 'stopped') {
-			this.process = execSh(`cd ${this.path} && ${this.ServiceStartCommand}`);
+			this.process = execSh(`cd ${this.servicePath} && ${this.commands.start}`);
 			this.bind();
 			this.status = 'running';
 		}
@@ -72,7 +59,7 @@ class InstanceProcess {
 			this.process.once('close', (code, signal) => {
 				if (!this.respawn) {
 					console.log(`${this.serviceName} restarting automatically`);
-					this.process = execSh(`cd ${this.path} && ${this.ServiceStartCommand}`);
+					this.process = execSh(`cd ${this.servicePath} && ${this.commands.start}`);
 					this.status = 'running';
 					this.bind();
 				}
@@ -88,7 +75,7 @@ class InstanceProcess {
 				// This is the only working way on windows ( ￣＾￣)
 				spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
 			} else {
-				this.process.kill();
+				process.kill(-this.process.pid, 'SIGTERM');
 			}
 		}
 	}

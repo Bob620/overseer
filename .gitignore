@@ -57,8 +57,11 @@ typings/
 # dotenv environment variables file
 .env
 
-// Ignore config file
+# Ignore config file
 config/config.json
 
-// Ignore external gits
+# Ignore external gits
 /servicewatcher/services/*
+
+# webstorm things
+/.idea/*
