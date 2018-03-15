@@ -60,8 +60,8 @@ typings/
 # Ignore config file
 config/config.json
 
-# Ignore external gits
-/servicewatcher/services/*
+# Ignore external git repos
+/services
 
 # webstorm things
 /.idea/*

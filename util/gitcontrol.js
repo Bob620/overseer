@@ -2,12 +2,12 @@ const fs = require('fs');
 
 const simpleGit = require('simple-git')();
 
-const Service = require('../util/service');
+const Service = require('./service');
 
 class GitControl {
 	constructor(config, defaultSettings, onInit) {
 		this.remoteURL = `https://${config.username}:${config.password}@github.com`;
-		this.servicePath = `${__dirname}/services`;
+		this.servicePath = `${__dirname.substr(0, __dirname.length-5)}/services`;
 		this.defaultSettings = defaultSettings;
 		this.services = new Map();
 

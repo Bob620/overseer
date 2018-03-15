@@ -3,12 +3,14 @@
     "username": "",
     "password": ""
   },
-  "defaultServiceSettings": {
-    "serviceName": {
-      "start": "npm start",
-      "install": "npm install",
-      "build": "npm run build",
-      "args": []
-    }
-  }
+"defaultServiceSettings": {
+	"author/repo": {
+		"commands": {
+			"start": "npm start",
+			"install": "npm install",
+			"build": "npm run build"
+		},
+		"args": []
+	}
+}
 }

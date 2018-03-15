@@ -13,10 +13,10 @@ const ConsoleAPIRouter = require('./routes/api/console');
 const ConsoleRouter = require('./routes/console/console');
 
 // Service Watcher
-const ServiceWatcher = require('./servicewatcher/index');
-const serviceWatcher = new ServiceWatcher(config.gitRemote, config.defaultServiceSettings, () => {
-	serviceWatcher.getNewestRepo('bob620/waifusite').then(() => {
-		const waifusite = serviceWatcher.services.get('bob620/waifusite');
+const GitControl = require('./util/gitcontrol');
+const gitControl = new GitControl(config.gitRemote, config.defaultServiceSettings, () => {
+	gitControl.getNewestRepo('bob620/waifusite').then(() => {
+		const waifusite = gitControl.services.get('bob620/waifusite');
 
 		waifusite.createInstance();
 
@@ -33,7 +33,7 @@ const serviceWatcher = new ServiceWatcher(config.gitRemote, config.defaultServic
 	});
 });
 
-apiRouter.use('/console', new ConsoleAPIRouter(serviceWatcher).router);
+apiRouter.use('/console', new ConsoleAPIRouter(gitControl).router);
 apiRouter.use('/services', new ServicesAPIRouter([]).router);
 webserver.use('/api', apiRouter);
 
