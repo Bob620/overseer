@@ -15,19 +15,24 @@ const ConsoleRouter = require('./routes/console/console');
 // Service Watcher
 const GitControl = require('./util/gitcontrol');
 const gitControl = new GitControl(config.gitRemote, config.defaultServiceSettings, () => {
-	gitControl.getNewestRepo('bob620/waifusite').then(() => {
-		const waifusite = gitControl.services.get('bob620/waifusite');
+	gitControl.getNewestRepo('bob620/childexample').then(() => {
+		const waifusite = gitControl.services.get('bob620/childexample');
 
 		waifusite.createInstance();
 
 		setTimeout(() => {
 			waifusite.instances.forEach((instance) => {
-				instance.restart();
+				instance.process.send("Test");
 			});
 			setTimeout(() => {
 				waifusite.instances.forEach((instance) => {
-					instance.stop();
+					instance.restart();
 				});
+				setTimeout(() => {
+					waifusite.instances.forEach((instance) => {
+						instance.stop();
+					});
+				}, 5000);
 			}, 5000);
 		}, 5000);
 	});
