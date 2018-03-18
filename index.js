@@ -22,7 +22,9 @@ const gitControl = new GitControl(config.gitRemote, config.defaultServiceSetting
 
 		setTimeout(() => {
 			waifusite.instances.forEach((instance) => {
-				instance.process.send("Test");
+				if (instance.process.connected) {
+					instance.process.send("Test");
+				}
 			});
 			setTimeout(() => {
 				waifusite.instances.forEach((instance) => {

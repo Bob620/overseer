@@ -6,12 +6,10 @@
   "defaultServiceSettings": {
     "author/repo": {
       "commands": {
-        "start": "npm",
+        "start": "npm start",
         "install": "npm install",
         "build": "npm run build"
       },
-      "entryFile": "index.js",
-      "args": ["start"]
     }
   }
 }

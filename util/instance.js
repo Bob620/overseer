@@ -1,5 +1,5 @@
 const execSh = require('exec-sh'),
-	    { spawn, fork } = require('child_process');
+	    { spawn } = require('child_process');
 
 class Instance {
 	constructor(instanceId, serviceName, servicePath, settings) {
@@ -10,7 +10,6 @@ class Instance {
 		this.respawn = settings.respawn;
 		this.commands = settings.commands;
 		this.servicePath = servicePath;
-		this.args = settings.args;
 		this.process = undefined;
 	}
 
@@ -53,7 +52,7 @@ class Instance {
 
 	restart() {
 		if (this.status === 'running') {
-			this.process.once('close', (code, signal) => {
+			this.process.once('close', () => {
 				if (!this.respawn) {
 					console.log(`[${this.serviceName} - ${this.id}] Restarting automatically`);
 					this.createProcess();
@@ -72,7 +71,7 @@ class Instance {
 	createProcess() {
 //		this.process = execSh(`cd ${this.servicePath} && ${this.commands.start}`);
 //		this.process = fork(`${this.servicePath}/${this.entryFile}`);
-		this.process = spawn(this.commands.start, this.args, {cwd: this.servicePath, stdio: ['ignore', 'ignore', 'ignore', 'ipc']});
+		this.process = spawn(this.commands.start.cmd, this.commands.start.args, {cwd: this.servicePath, stdio: ['ignore', 'ignore', 'ignore', 'ipc']});
 		this.status = 'running';
 		this.bind();
 	}

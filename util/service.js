@@ -1,5 +1,5 @@
 const simpleGit = require('simple-git')(),
-      execSh = require('exec-sh'),
+	    { exec } = require('child_process'),
 	    { generateV4 } = require('./generateuuid');
 
 const Instance = require('../util/instance');
@@ -10,14 +10,23 @@ class Service {
 		this.remotePath = remotePath;
 		this.serviceName = serviceName;
 		this.defaultSettings = defaultSettings;
+		this.commands = defaultSettings.commands;
 		this.instances = new Map();
+
+		let command = defaultSettings.commands.start;
+		command = command.split(' ');
+		this.commands['start'] = {"cmd": command.shift(), "args": command};
 	}
 
 	updateDependencies() {
 		return new Promise((resolve, reject) => {
+			if (this.commands.install === undefined || this.commands.install === '') {
+				resolve();
+				return;
+			}
 			console.log('Updating dependencies...\n');
 
-			execSh(this.defaultSettings.commands.install, {cwd: this.servicePath}, err => {
+			exec(this.commands.install, {cwd: this.servicePath}, err => {
 				if(err) reject(err);
 				console.log('Dependencies updated');
 				resolve();
@@ -30,7 +39,7 @@ class Service {
 			console.log(`Running ${command}...\n`);
 
 			try {
-				execSh(this.defaultSettings.commands[command], {cwd: this.servicePath}, err => {
+				exec(this.commands[command], {cwd: this.servicePath}, err => {
 					if(err) console.log(err);
 					console.log(`Done running ${command}`);
 					resolve();
