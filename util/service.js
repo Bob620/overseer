@@ -2,7 +2,7 @@ const simpleGit = require('simple-git')(),
 	    { exec } = require('child_process'),
 	    { generateV4 } = require('./generateuuid');
 
-const Instance = require('../util/instance');
+const { Instance } = require('../util/instance');
 
 class Service {
 	constructor(serviceName, servicePath, remotePath, defaultSettings) {

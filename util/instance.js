@@ -1,11 +1,21 @@
-const execSh = require('exec-sh'),
-	    { spawn } = require('child_process');
+const EventEmitter = require('events');
 
-class Instance {
+const { spawn } = require('child_process');
+
+const InstanceConst = {
+	"STATUS": {
+		"STOPPED": 0,
+		"RUNNING": 1
+	}
+};
+
+class Instance extends EventEmitter {
 	constructor(instanceId, serviceName, servicePath, settings) {
+		super();
+
 		this.id = instanceId;
 		this.serviceName = serviceName;
-		this.status = 'stopped';
+		this.processStatus = InstanceConst.STATUS.STOPPED;
 		this.entryFile = settings.entryFile;
 		this.respawn = settings.respawn;
 		this.commands = settings.commands;
@@ -13,15 +23,34 @@ class Instance {
 		this.process = undefined;
 	}
 
+	set status(newStatus) {
+		if (newStatus !== this.status) {
+			switch (newStatus) {
+				case InstanceConst.STATUS.RUNNING:
+					this.processStatus = newStatus;
+					this.emit('open');
+					break;
+				case InstanceConst.STATUS.STOPPED:
+					this.processStatus = newStatus;
+					this.emit('exit');
+					break;
+			}
+		}
+	}
+
+	get status() {
+		return this.processStatus;
+	}
+
 	bind() {
 		this.process.on('disconnect', () => {
 			console.log(`[${this.serviceName} - ${this.id}] Disconnected`);
-			this.status = 'stopped';
+			this.status = InstanceConst.STATUS.STOPPED;
 		});
 
 		this.process.on('close', (code, signal) => {
 			console.log(`[${this.serviceName} - ${this.id}] Closed with code ${code} from signal ${signal}`);
-			this.status = 'stopped';
+			this.status = InstanceConst.STATUS.STOPPED;
 
 			if (this.respawn) {
 				console.log(`[${this.serviceName} - ${this.id}] Restarting automatically`);
@@ -31,27 +60,29 @@ class Instance {
 
 		this.process.on('err', err => {
 			console.log(err);
-			this.status = 'stopped';
+			this.emit('err', err);
+			this.status = InstanceConst.STATUS.STOPPED;
 		});
 
 		this.process.on('exit', (code, signal) => {
 			console.log(`[${this.serviceName} - ${this.id}] Exited with code ${code} from signal ${signal}`);
-			this.status = 'stopped';
+			this.status = InstanceConst.STATUS.STOPPED;
 		});
 
 		this.process.on('message', message => {
 			console.log(`[${this.serviceName} - ${this.id}] Received: ${message}`);
+			this.emit('message', message);
 		});
 	}
 
 	start() {
-		if (this.status === 'stopped') {
+		if (this.status === InstanceConst.STATUS.STOPPED) {
 			this.createProcess();
 		}
 	}
 
 	restart() {
-		if (this.status === 'running') {
+		if (this.status === InstanceConst.STATUS.RUNNING) {
 			this.process.once('close', () => {
 				if (!this.respawn) {
 					console.log(`[${this.serviceName} - ${this.id}] Restarting automatically`);
@@ -71,13 +102,13 @@ class Instance {
 	createProcess() {
 //		this.process = execSh(`cd ${this.servicePath} && ${this.commands.start}`);
 //		this.process = fork(`${this.servicePath}/${this.entryFile}`);
-		this.process = spawn(this.commands.start.cmd, this.commands.start.args, {cwd: this.servicePath, stdio: ['ignore', 'ignore', 'ignore', 'ipc']});
-		this.status = 'running';
+		this.process = spawn(this.commands.start.cmd, this.commands.start.args, {cwd: this.servicePath, stdio: 'pipe'});
+		this.status = InstanceConst.STATUS.RUNNING;
 		this.bind();
 	}
 
 	stop() {
-		if (this.status === 'running') {
+		if (this.status === InstanceConst.STATUS.RUNNING) {
 			if (process.platform === "win32") {
 				// This is the only working way on windows ( ￣＾￣)
 				spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
@@ -88,4 +119,4 @@ class Instance {
 	}
 }
 
-module.exports = Instance;
+module.exports = {Instance, InstanceConst};
