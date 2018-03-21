@@ -5,12 +5,13 @@ const simpleGit = require('simple-git')(),
 const { Instance } = require('../util/instance');
 
 class Service {
-	constructor(serviceName, servicePath, remotePath, defaultSettings) {
+	constructor(serviceName, servicePath, remotePath, defaultSettings, portService) {
 		this.servicePath = servicePath;
 		this.remotePath = remotePath;
 		this.serviceName = serviceName;
 		this.defaultSettings = defaultSettings;
 		this.commands = defaultSettings.commands;
+		this.portService = portService;
 		this.instances = new Map();
 
 		let command = defaultSettings.commands.start;
@@ -64,10 +65,27 @@ class Service {
 		});
 	}
 
-	createInstance(settings=this.defaultSettings) {
+	createInstance(userSettings=this.defaultSettings) {
+		let settings = JSON.parse(JSON.stringify(userSettings));
+
+		if (this.defaultSettings.args.port) {
+			if (userSettings.port) {
+				if (!this.portService.isAvailable(userSettings.port)) {
+					throw new Error('Port unavailable');
+				}
+			} else {
+				settings.args.port = [this.defaultSettings.args.port, this.portService.generatePort()];
+			}
+		}
+
 		const instanceId = generateV4();
 		const instance = new Instance(instanceId, this.serviceName, this.servicePath, settings);
 		this.instances.set(instanceId, instance);
+
+		instance.on('exit', () => {
+			this.portService.clearPort(settings.args.port[1]);
+		});
+
 		instance.start();
 	}
 

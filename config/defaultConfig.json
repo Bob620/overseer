@@ -3,12 +3,18 @@
     "username": "",
     "password": ""
   },
+  "options": {
+    "ports": [8000, 9000]
+  },
   "defaultServiceSettings": {
     "author/repo": {
       "commands": {
         "start": "npm start",
         "install": "npm install",
         "build": "npm run build"
+      },
+      "args": {
+        "port": "-p"
       }
     }
   }

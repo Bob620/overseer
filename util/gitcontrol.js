@@ -5,10 +5,11 @@ const simpleGit = require('simple-git')();
 const Service = require('./service');
 
 class GitControl {
-	constructor(config, defaultSettings, onInit) {
+	constructor(config, defaultSettings, portService, onInit) {
 		this.remoteURL = `https://${config.username}:${config.password}@github.com`;
 		this.servicePath = `${__dirname.substr(0, __dirname.length-5)}/services`;
 		this.defaultSettings = defaultSettings;
+		this.portService = portService;
 		this.services = new Map();
 
 		this.checkForExistingServices().then(() => {
@@ -33,7 +34,7 @@ class GitControl {
 				possibleServices.push(new Promise((resolve) => {
 					simpleGit.cwd(`${this.servicePath}/${gitRepo}`).checkIsRepo((err, isRepo) => {
 						if (isRepo) {
-							this.services.set(gitRepo, new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo]));
+							this.services.set(gitRepo, new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo], this.portService));
 							resolve();
 						} else {
 							fs.rmdirSync(`${this.servicePath}/${gitRepo}`);
@@ -64,7 +65,7 @@ class GitControl {
 					return;
 				}
 
-				const service = new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo]);
+				const service = new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo], this.portService);
 				this.services.set(gitRepo, service);
 
 				console.log(`Cloned ${gitRepo}`);

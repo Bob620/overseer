@@ -12,31 +12,16 @@ const ConsoleAPIRouter = require('./routes/api/console');
 // Webserver console routes
 const ConsoleRouter = require('./routes/console/console');
 
+// PortService to keep track of used ports
+const PortService = require('./util/portservice');
+const portService = new PortService(config.options.ports);
+
 // Service Watcher
 const GitControl = require('./util/gitcontrol');
-const gitControl = new GitControl(config.gitRemote, config.defaultServiceSettings, () => {
-	gitControl.getNewestRepo('bob620/childexample').then(() => {
-		const waifusite = gitControl.services.get('bob620/childexample');
-
+const gitControl = new GitControl(config.gitRemote, config.defaultServiceSettings, portService, () => {
+	gitControl.getNewestRepo('bob620/waifusite').then(() => {
+		const waifusite = gitControl.services.get('bob620/waifusite');
 		waifusite.createInstance();
-
-		setTimeout(() => {
-			waifusite.instances.forEach((instance) => {
-				if (instance.process.connected) {
-					instance.process.send("Test");
-				}
-			});
-			setTimeout(() => {
-				waifusite.instances.forEach((instance) => {
-					instance.restart();
-				});
-				setTimeout(() => {
-					waifusite.instances.forEach((instance) => {
-						instance.stop();
-					});
-				}, 5000);
-			}, 5000);
-		}, 5000);
 	});
 });
 

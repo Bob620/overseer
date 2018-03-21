@@ -17,10 +17,27 @@ class Instance extends EventEmitter {
 		this.serviceName = serviceName;
 		this.processStatus = InstanceConst.STATUS.STOPPED;
 		this.entryFile = settings.entryFile;
+		this.args = settings.args;
 		this.respawn = settings.respawn;
 		this.commands = settings.commands;
 		this.servicePath = servicePath;
 		this.process = undefined;
+	}
+
+	get arguments() {
+		let args = [];
+
+		if (this.commands.start.cmd === 'npm') {
+			args.push('--');
+		}
+
+		Object.values(this.args).forEach(argument => {
+			argument.forEach(value => {
+				args.push(value);
+			});
+		});
+
+		return args;
 	}
 
 	set status(newStatus) {
@@ -42,6 +59,11 @@ class Instance extends EventEmitter {
 		return this.processStatus;
 	}
 
+	exitInstance() {
+		this.respawn = false;
+		this.stop();
+	}
+
 	bind() {
 		this.process.on('disconnect', () => {
 			console.log(`[${this.serviceName} - ${this.id}] Disconnected`);
@@ -55,6 +77,8 @@ class Instance extends EventEmitter {
 			if (this.respawn) {
 				console.log(`[${this.serviceName} - ${this.id}] Restarting automatically`);
 				this.createProcess();
+			} else {
+				this.emit('exit');
 			}
 		});
 
@@ -101,8 +125,8 @@ class Instance extends EventEmitter {
 
 	createProcess() {
 //		this.process = execSh(`cd ${this.servicePath} && ${this.commands.start}`);
-//		this.process = fork(`${this.servicePath}/${this.entryFile}`);
-		this.process = spawn(this.commands.start.cmd, this.commands.start.args, {cwd: this.servicePath, stdio: 'pipe'});
+//		this.process = fork(`${this.servicePath}/${this.entryFile}`
+		this.process = spawn(this.commands.start.cmd, this.commands.start.args.concat(this.arguments), {cwd: this.servicePath, stdio: 'pipe'});
 		this.status = InstanceConst.STATUS.RUNNING;
 		this.bind();
 	}
