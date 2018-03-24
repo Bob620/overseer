@@ -2,6 +2,8 @@ const EventEmitter = require('events');
 
 const { spawn } = require('child_process');
 
+const Log = require('./log');
+
 const InstanceConst = {
 	"STATUS": {
 		"STOPPED": 0,
@@ -22,6 +24,12 @@ class Instance extends EventEmitter {
 		this.commands = settings.commands;
 		this.servicePath = servicePath;
 		this.process = undefined;
+
+		this.log = Log.log.bind(Log, instanceId);
+
+		this.statistics = {
+			downTime: []
+		}
 	}
 
 	get arguments() {
@@ -59,37 +67,10 @@ class Instance extends EventEmitter {
 		return this.processStatus;
 	}
 
-	exitInstance() {
-		this.respawn = false;
-		this.stop();
-	}
-
-	bind() {
+	async bind() {
+/* IPC messaging
 		this.process.on('disconnect', () => {
 			console.log(`[${this.serviceName} - ${this.id}] Disconnected`);
-			this.status = InstanceConst.STATUS.STOPPED;
-		});
-
-		this.process.on('close', (code, signal) => {
-			console.log(`[${this.serviceName} - ${this.id}] Closed with code ${code} from signal ${signal}`);
-			this.status = InstanceConst.STATUS.STOPPED;
-
-			if (this.respawn) {
-				console.log(`[${this.serviceName} - ${this.id}] Restarting automatically`);
-				this.createProcess();
-			} else {
-				this.emit('exit');
-			}
-		});
-
-		this.process.on('err', err => {
-			console.log(err);
-			this.emit('err', err);
-			this.status = InstanceConst.STATUS.STOPPED;
-		});
-
-		this.process.on('exit', (code, signal) => {
-			console.log(`[${this.serviceName} - ${this.id}] Exited with code ${code} from signal ${signal}`);
 			this.status = InstanceConst.STATUS.STOPPED;
 		});
 
@@ -97,47 +78,71 @@ class Instance extends EventEmitter {
 			console.log(`[${this.serviceName} - ${this.id}] Received: ${message}`);
 			this.emit('message', message);
 		});
+*/
+		this.process.on('err', err => {
+			this.emit('err', err);
+			this.status = InstanceConst.STATUS.STOPPED;
+		});
+
+		this.process.on('close', async (code, signal) => {
+			this.log(`Closed with code ${code} from signal ${signal}`);
+			this.status = InstanceConst.STATUS.STOPPED;
+
+			if (this.respawn) {
+				this.log(`Restarting automatically`);
+				await this.createProcess();
+			} else {
+				this.emit('exit');
+			}
+		});
+
+//		this.process.on('exit', (code, signal) => {
+//			this.log(`Exited with code ${code} from signal ${signal}`);
+//			this.status = InstanceConst.STATUS.STOPPED;
+//		});
 	}
 
-	start() {
+	async start() {
 		if (this.status === InstanceConst.STATUS.STOPPED) {
-			this.createProcess();
+			await this.createProcess();
+			this.log(`Started ${this.args.port ? `on port ${this.args.port[1]}` : ''}`);
 		}
 	}
 
-	restart() {
+	async restart() {
 		if (this.status === InstanceConst.STATUS.RUNNING) {
-			this.process.once('close', () => {
+			this.process.once('close', async () => {
 				if (!this.respawn) {
-					console.log(`[${this.serviceName} - ${this.id}] Restarting automatically`);
-					this.createProcess();
+					this.log(`Restarting automatically`);
+					await this.createProcess();
 				}
 			});
 
-			this.stop();
+			await this.stop();
 		} else {
 			if (!this.respawn) {
-				console.log(`[${this.serviceName} - ${this.id}] Restarting automatically`);
-				this.createProcess();
+				this.log(`Restarting automatically`);
+				await this.createProcess();
 			}
 		}
 	}
 
-	createProcess() {
+	async createProcess() {
 //		this.process = execSh(`cd ${this.servicePath} && ${this.commands.start}`);
 //		this.process = fork(`${this.servicePath}/${this.entryFile}`
 		this.process = spawn(this.commands.start.cmd, this.commands.start.args.concat(this.arguments), {cwd: this.servicePath, stdio: 'pipe'});
 		this.status = InstanceConst.STATUS.RUNNING;
-		this.bind();
+		await this.bind();
 	}
 
-	stop() {
+	async stop() {
+		this.respawn = false;
 		if (this.status === InstanceConst.STATUS.RUNNING) {
 			if (process.platform === "win32") {
 				// This is the only working way on windows ( ￣＾￣)
-				spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
+				await spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
 			} else {
-				this.process.kill('SIGINT');
+				await this.process.kill('SIGINT');
 			}
 		}
 	}

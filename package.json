@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/bob620/overseer#readme",
   "dependencies": {
+    "colors": "^1.2.1",
     "cookie-parser": "^1.4.3",
     "dynamodb": "^1.1.1",
     "exec-sh": "^0.2.1",

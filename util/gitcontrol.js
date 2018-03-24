@@ -1,63 +1,63 @@
+const util = require('util');
 const fs = require('fs');
+const rmdir = util.promisify(fs.rmdir);
 
 const simpleGit = require('simple-git')();
 
-const Service = require('./service');
+const Log = require('./log');
+const log = Log.log.bind(Log, 'GitControl');
 
 class GitControl {
-	constructor(config, defaultSettings, portService, onInit) {
+	constructor(config, services) {
 		this.remoteURL = `https://${config.username}:${config.password}@github.com`;
 		this.servicePath = `${__dirname.substr(0, __dirname.length-5)}/services`;
-		this.defaultSettings = defaultSettings;
-		this.portService = portService;
-		this.services = new Map();
+		this.services = services;
 
-		this.checkForExistingServices().then(() => {
-			onInit();
-		});
-	}
-
-	checkForExistingServices() {
 		try {
 			fs.mkdirSync(this.servicePath);
-		} catch (err) {}
+		} catch(err) {}
+	}
 
+	async checkForExistingServices() {
+		log('Checking for existing services...');
 		let possibleServices = [];
 
-		const authors = fs.readdirSync(this.servicePath);
-		for (let authorIndex in authors) {
-			const author = authors[authorIndex];
-			const repos = fs.readdirSync(`${this.servicePath}/${author}`);
-			for (let repoIndex in repos) {
-				const repo = repos[repoIndex];
+		fs.readdirSync(this.servicePath).forEach(async author => {
+			fs.readdirSync(`${this.servicePath}/${author}`).forEach(repo => {
 				const gitRepo = `${author}/${repo}`;
-				possibleServices.push(new Promise((resolve) => {
-					simpleGit.cwd(`${this.servicePath}/${gitRepo}`).checkIsRepo((err, isRepo) => {
+
+				possibleServices.push(new Promise(resolve => {
+					simpleGit.cwd(`${this.servicePath}/${gitRepo}`).checkIsRepo(async (err, isRepo) => {
 						if (isRepo) {
-							this.services.set(gitRepo, new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo], this.portService));
+							await this.services.addService(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`);
 							resolve();
 						} else {
-							fs.rmdirSync(`${this.servicePath}/${gitRepo}`);
+							await rmdir(`${this.servicePath}/${gitRepo}`);
 							resolve();
 						}
 					});
 				}));
-			}
-		}
+			});
+		});
 
-		return Promise.all(possibleServices);
+		return Promise.all(possibleServices).then(() => {
+			log('Existing repos searched');
+		});
 	}
 
 	getNewestRepo(gitRepo) {
-		if (!this.services.has(gitRepo)) {
-			return this.cloneService(gitRepo);
-		} else {
-			return this.services.get(gitRepo).gitPull();
-		}
+		return new Promise((resolve, reject) => {
+			this.services.getService(gitRepo).then(async (service) => {
+				await service.gitPull();
+				resolve(service);
+			}).catch(async () => {
+				resolve(await this.cloneRepo(gitRepo));
+			});
+		});
 	}
 
-	cloneService(gitRepo) {
-		console.log(`\nCloning ${gitRepo}...`);
+	cloneRepo(gitRepo) {
+		log(`Cloning ${gitRepo}...`);
 		return new Promise((resolve, reject) => {
 			simpleGit.clone(`${this.remoteURL}/${gitRepo}`, `${this.servicePath}/${gitRepo}`, (err) => {
 				if (err) {
@@ -65,25 +65,14 @@ class GitControl {
 					return;
 				}
 
-				const service = new Service(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`, this.defaultSettings[gitRepo], this.portService);
-				this.services.set(gitRepo, service);
-
-				console.log(`Cloned ${gitRepo}`);
-				service.updateDependencies().then(() => {
-					resolve();
-				})
+				this.services.addService(gitRepo, `${this.servicePath}/${gitRepo}`, `${this.remoteURL}/${gitRepo}`).then(service => {
+					log(`Cloned ${gitRepo}`);
+					service.updateDependencies().then(() => {
+						resolve(service);
+					});
+				});
 			});
 		});
-	}
-
-	listServices() {
-		let serviceNames = [];
-
-		this.services.forEach((service, serviceName) => {
-			serviceNames.push(serviceName);
-		});
-
-		return serviceNames;
 	}
 }
 

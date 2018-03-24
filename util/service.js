@@ -2,7 +2,8 @@ const simpleGit = require('simple-git')(),
 	    { exec } = require('child_process'),
 	    { generateV4 } = require('./generateuuid');
 
-const { Instance } = require('../util/instance');
+const { Instance } = require('./instance'),
+      log = require('./log');
 
 class Service {
 	constructor(serviceName, servicePath, remotePath, defaultSettings, portService) {
@@ -14,9 +15,11 @@ class Service {
 		this.portService = portService;
 		this.instances = new Map();
 
+		this.log = log.log.bind(log, serviceName);
+
 		let command = defaultSettings.commands.start;
 		command = command.split(' ');
-		this.commands['start'] = {"cmd": command.shift(), "args": command};
+		this.commands['start'] = {'cmd': command.shift(), 'args': command};
 	}
 
 	updateDependencies() {
@@ -25,11 +28,11 @@ class Service {
 				resolve();
 				return;
 			}
-			console.log('Updating dependencies...\n');
+			this.log('Updating dependencies...');
 
 			exec(this.commands.install, {cwd: this.servicePath}, err => {
 				if(err) reject(err);
-				console.log('Dependencies updated');
+				this.log('Dependencies updated');
 				resolve();
 			});
 		});
@@ -37,12 +40,12 @@ class Service {
 
 	runCommand(command) {
 		return new Promise((resolve, reject) => {
-			console.log(`Running ${command}...\n`);
+			this.log(`Running ${command}...`);
 
 			try {
 				exec(this.commands[command], {cwd: this.servicePath}, err => {
-					if(err) console.log(err);
-					console.log(`Done running ${command}`);
+					if(err) this.log(err);
+					this.log(`Done running ${command}`);
 					resolve();
 				});
 			} catch(err) {
@@ -58,10 +61,10 @@ class Service {
 	}
 
 	removeInstance(instanceId) {
-		this.instances.get(instanceId).stop().then(() => {
+		return this.instances.get(instanceId).stop().then(() => {
 			this.instances.delete(instanceId);
 		}).catch((err) => {
-			console.log(err);
+			this.log(err);
 		});
 	}
 
@@ -86,7 +89,13 @@ class Service {
 			this.portService.clearPort(settings.args.port[1]);
 		});
 
-		instance.start();
+		return instance;
+	}
+
+	stop() {
+		this.instances.forEach(instance => {
+			instance.stop();
+		});
 	}
 
 	getInstance(instanceId) {
@@ -96,7 +105,7 @@ class Service {
 	listInstances() {
 		let instancesList = [];
 
-		this.instances.forEach((instanceId, instance) => {
+		this.instances.forEach(instance => {
 			instancesList.push(instance);
 		});
 
@@ -104,7 +113,7 @@ class Service {
 	}
 
 	gitPull() {
-		console.log(`\nPulling ${this.serviceName}...`);
+		this.log(`Pulling ${this.serviceName}...`);
 		return new Promise((resolve, reject) => {
 			simpleGit.cwd(this.servicePath).pull((err) => {
 				if (err) {
@@ -112,7 +121,7 @@ class Service {
 					return;
 				}
 
-				console.log(`Pulled ${this.serviceName}`);
+				this.log(`Pulled ${this.serviceName}`);
 				this.updateDependencies().then(() => {
 					resolve();
 				})
