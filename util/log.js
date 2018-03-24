@@ -9,15 +9,6 @@ class Console extends EventEmitter {
 	}
 
 	log(name, message) {
-		const splitName = name.split('/');
-		switch(splitName.length) {
-			case 2:
-				name = `${splitName[0].blue}/${splitName[1].green}`;
-				break;
-			default:
-				name = name.blue;
-				break;
-		}
 		if (!this.logs.hasOwnProperty(name)) {
 			this.logs[name] = new Log();
 		}
@@ -33,13 +24,11 @@ class Console extends EventEmitter {
 
 class Log {
 	constructor() {
-//		super();
 		this.log = [];
 	}
 
 	push(message) {
 		this.log.push(message);
-//		this.emit(message);
 	}
 
 	get(max) {

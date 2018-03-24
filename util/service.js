@@ -4,18 +4,18 @@ const simpleGit = require('simple-git')(),
 
 const { Instance } = require('./instance'),
       log = require('./log');
+      portService = require('../manager/portservice');
 
 class Service {
-	constructor(serviceName, servicePath, remotePath, defaultSettings, portService) {
+	constructor(serviceName, servicePath, remotePath, defaultSettings) {
 		this.servicePath = servicePath;
 		this.remotePath = remotePath;
 		this.serviceName = serviceName;
 		this.defaultSettings = defaultSettings;
 		this.commands = defaultSettings.commands;
-		this.portService = portService;
 		this.instances = new Map();
 
-		this.log = log.log.bind(log, serviceName);
+		this.log = log.log.bind(log, `${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
 
 		let command = defaultSettings.commands.start;
 		command = command.split(' ');
@@ -54,30 +54,26 @@ class Service {
 		});
 	}
 
-	isUp() {
-		this.instances.forEach((instanceId, instance) => {
-
-		});
-	}
-
 	removeInstance(instanceId) {
-		return this.instances.get(instanceId).stop().then(() => {
+		const instance = this.instances.get(instanceId);
+		return instance.stop().then(() => {
+			portService.clearPort(instance.getPort());
 			this.instances.delete(instanceId);
 		}).catch((err) => {
 			this.log(err);
 		});
 	}
 
-	createInstance(userSettings=this.defaultSettings) {
+	async createInstance(userSettings=this.defaultSettings) {
 		let settings = JSON.parse(JSON.stringify(userSettings));
 
 		if (this.defaultSettings.args.port) {
 			if (userSettings.port) {
-				if (!this.portService.isAvailable(userSettings.port)) {
+				if (!portService.isAvailable(userSettings.port)) {
 					throw new Error('Port unavailable');
 				}
 			} else {
-				settings.args.port = [this.defaultSettings.args.port, this.portService.generatePort()];
+				settings.args.port = [this.defaultSettings.args.port, portService.getNextPort()];
 			}
 		}
 
@@ -85,17 +81,16 @@ class Service {
 		const instance = new Instance(instanceId, this.serviceName, this.servicePath, settings);
 		this.instances.set(instanceId, instance);
 
-		instance.on('exit', () => {
-			this.portService.clearPort(settings.args.port[1]);
-		});
-
 		return instance;
 	}
 
 	stop() {
+		let processesToStop = [];
 		this.instances.forEach(instance => {
-			instance.stop();
+			processesToStop.push(instance.stop());
 		});
+
+		return Promise.all(processesToStop);
 	}
 
 	getInstance(instanceId) {
@@ -113,8 +108,8 @@ class Service {
 	}
 
 	gitPull() {
-		this.log(`Pulling ${this.serviceName}...`);
 		return new Promise((resolve, reject) => {
+			this.log(`Pulling ${this.serviceName}...`);
 			simpleGit.cwd(this.servicePath).pull((err) => {
 				if (err) {
 					reject(err);

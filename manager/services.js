@@ -1,10 +1,13 @@
-const Service = require('./service');
+const Service = require('../util/service');
+      portService = require('./portservice');
 
 class Services {
-	constructor(defaultSettings, portService) {
+	constructor() {
 		this.services = new Map();
+	}
+
+	init(defaultSettings) {
 		this.defaultSettings = defaultSettings;
-		this.portService = portService;
 	}
 
 	getService(serviceName) {
@@ -26,4 +29,4 @@ class Services {
 	}
 }
 
-module.exports = Services;
+module.exports = new Services();

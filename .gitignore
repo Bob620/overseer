@@ -64,4 +64,4 @@ config/config.json
 /services
 
 # webstorm things
-/.idea/*
+.idea

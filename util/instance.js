@@ -5,7 +5,7 @@ const { spawn } = require('child_process');
 const Log = require('./log');
 
 const InstanceConst = {
-	"STATUS": {
+	"status": {
 		"STOPPED": 0,
 		"RUNNING": 1
 	}
@@ -15,31 +15,50 @@ class Instance extends EventEmitter {
 	constructor(instanceId, serviceName, servicePath, settings) {
 		super();
 
-		this.id = instanceId;
-		this.serviceName = serviceName;
-		this.processStatus = InstanceConst.STATUS.STOPPED;
-		this.entryFile = settings.entryFile;
-		this.args = settings.args;
-		this.respawn = settings.respawn;
-		this.commands = settings.commands;
-		this.servicePath = servicePath;
-		this.process = undefined;
+		this.data = {
+			id: instanceId,
+			serviceName,
+			servicePath,
+			settings,
+			processStatus: InstanceConst.status.STOPPED,
+			process: undefined
+		};
 
-		this.log = Log.log.bind(Log, instanceId);
-
-		this.statistics = {
-			downTime: []
-		}
+		this.log = Log.log.bind(Log, instanceId.blue);
 	}
 
-	get arguments() {
+	getArgs() {
+		return this.data.settings.args;
+	}
+
+	getCommands() {
+		return this.data.settings.commands;
+	}
+
+	getId() {
+		return this.data.id;
+	}
+
+	getPort() {
+		const port = this.data.settings.args.port;
+		if (port) {
+			return port[1];
+		}
+		return 0;
+	}
+
+	getRespawn() {
+		return this.data.settings.respawn;
+	}
+
+	getSerialArgs() {
 		let args = [];
 
-		if (this.commands.start.cmd === 'npm') {
+		if (this.getCommands().start.cmd === 'npm') {
 			args.push('--');
 		}
 
-		Object.values(this.args).forEach(argument => {
+		Object.values(this.getArgs()).forEach(argument => {
 			argument.forEach(value => {
 				args.push(value);
 			});
@@ -48,24 +67,38 @@ class Instance extends EventEmitter {
 		return args;
 	}
 
-	set status(newStatus) {
-		if (newStatus !== this.status) {
+	getServiceName() {
+		return this.data.serviceName;
+	}
+
+	getServicePath() {
+		return this.data.servicePath;
+	}
+
+	getStatus() {
+		return this.data.processStatus
+	}
+
+
+	setRespawn(willRespawn) {
+		this.data.settings.respawn = willRespawn;
+	}
+
+	setStatus(newStatus) {
+		if (newStatus !== this.getStatus()) {
 			switch (newStatus) {
-				case InstanceConst.STATUS.RUNNING:
-					this.processStatus = newStatus;
+				case InstanceConst.status.RUNNING:
+					this.data.processStatus = newStatus;
 					this.emit('open');
 					break;
-				case InstanceConst.STATUS.STOPPED:
-					this.processStatus = newStatus;
+				case InstanceConst.status.STOPPED:
+					this.data.processStatus = newStatus;
 					this.emit('exit');
 					break;
 			}
 		}
 	}
 
-	get status() {
-		return this.processStatus;
-	}
 
 	async bind() {
 /* IPC messaging
@@ -79,40 +112,35 @@ class Instance extends EventEmitter {
 			this.emit('message', message);
 		});
 */
-		this.process.on('err', err => {
+		this.data.process.on('err', err => {
 			this.emit('err', err);
-			this.status = InstanceConst.STATUS.STOPPED;
+			this.setStatus(InstanceConst.status.STOPPED);
 		});
 
-		this.process.on('close', async (code, signal) => {
+		this.data.process.on('close', async (code, signal) => {
 			this.log(`Closed with code ${code} from signal ${signal}`);
-			this.status = InstanceConst.STATUS.STOPPED;
+			this.setStatus(InstanceConst.status.STOPPED);
 
-			if (this.respawn) {
+			if (this.getRespawn) {
 				this.log(`Restarting automatically`);
 				await this.createProcess();
 			} else {
 				this.emit('exit');
 			}
 		});
-
-//		this.process.on('exit', (code, signal) => {
-//			this.log(`Exited with code ${code} from signal ${signal}`);
-//			this.status = InstanceConst.STATUS.STOPPED;
-//		});
 	}
 
 	async start() {
-		if (this.status === InstanceConst.STATUS.STOPPED) {
+		if (this.getStatus() === InstanceConst.status.STOPPED) {
 			await this.createProcess();
-			this.log(`Started ${this.args.port ? `on port ${this.args.port[1]}` : ''}`);
+			this.log(`Started on port ${this.getPort()}`);
 		}
 	}
 
 	async restart() {
-		if (this.status === InstanceConst.STATUS.RUNNING) {
-			this.process.once('close', async () => {
-				if (!this.respawn) {
+		if (this.getStatus() === InstanceConst.status.RUNNING) {
+			this.data.process.once('close', async () => {
+				if (!this.getRespawn()) {
 					this.log(`Restarting automatically`);
 					await this.createProcess();
 				}
@@ -120,7 +148,7 @@ class Instance extends EventEmitter {
 
 			await this.stop();
 		} else {
-			if (!this.respawn) {
+			if (!this.getRespawn()) {
 				this.log(`Restarting automatically`);
 				await this.createProcess();
 			}
@@ -128,21 +156,22 @@ class Instance extends EventEmitter {
 	}
 
 	async createProcess() {
-//		this.process = execSh(`cd ${this.servicePath} && ${this.commands.start}`);
-//		this.process = fork(`${this.servicePath}/${this.entryFile}`
-		this.process = spawn(this.commands.start.cmd, this.commands.start.args.concat(this.arguments), {cwd: this.servicePath, stdio: 'pipe'});
-		this.status = InstanceConst.STATUS.RUNNING;
+		const startCommand = this.getCommands().start;
+
+		// Special spawn conditions for windows vs unix
+		this.data.process = spawn(/^win/.test(process.platform) ? `${startCommand.cmd}.cmd` : startCommand.cmd, startCommand.args.concat(this.getSerialArgs()), {cwd: this.getServicePath(), stdio: 'pipe'});
+		this.setStatus(InstanceConst.status.RUNNING);
 		await this.bind();
 	}
 
 	async stop() {
-		this.respawn = false;
-		if (this.status === InstanceConst.STATUS.RUNNING) {
+		this.setRespawn = false;
+		if (this.getStatus() === InstanceConst.status.RUNNING) {
 			if (process.platform === "win32") {
 				// This is the only working way on windows ( ￣＾￣)
-				await spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
+				await spawn('taskkill', ['/pid', this.data.process.pid, '/f', '/t']);
 			} else {
-				await this.process.kill('SIGINT');
+				await this.data.process.kill('SIGINT');
 			}
 		}
 	}
