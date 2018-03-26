@@ -3,7 +3,7 @@ const simpleGit = require('simple-git')(),
 	    { generateV4 } = require('./generateuuid');
 
 const { Instance } = require('./instance'),
-      log = require('./log');
+      Logger = require('./logger');
       portService = require('../manager/portservice');
 
 class Service {
@@ -15,7 +15,7 @@ class Service {
 		this.commands = defaultSettings.commands;
 		this.instances = new Map();
 
-		this.log = log.log.bind(log, `${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
+		this.log = Logger.log.bind(Logger, `${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
 
 		let command = defaultSettings.commands.start;
 		command = command.split(' ');

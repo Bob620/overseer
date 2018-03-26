@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 
 const { spawn } = require('child_process');
 
-const Log = require('./log');
+const Logger = require('./logger');
 
 const InstanceConst = {
 	"status": {
@@ -24,7 +24,7 @@ class Instance extends EventEmitter {
 			process: undefined
 		};
 
-		this.log = Log.log.bind(Log, instanceId.blue);
+		this.log = Logger.log.bind(Logger, instanceId.blue);
 	}
 
 	getArgs() {

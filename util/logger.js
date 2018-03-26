@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 
 const colors = require('colors');
 
-class Console extends EventEmitter {
+class Logger extends EventEmitter {
 	constructor() {
 		super();
 		this.logs = {};
@@ -36,4 +36,4 @@ class Log {
 	}
 }
 
-module.exports = new Console();
+module.exports = new Logger();

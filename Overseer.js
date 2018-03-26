@@ -1,8 +1,8 @@
 // Config
 const config = require('./config/config.json');
 
-const Log = require('./util/log');
-const log = Log.log.bind(Log, 'Overseer'.yellow);
+const Logger = require('./util/logger');
+const log = Logger.log.bind(Logger, 'Overseer'.yellow);
 
 class Overseer {
 	constructor() {
