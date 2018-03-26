@@ -6,10 +6,10 @@ function generateV4() {
 }
 
 // https://stackoverflow.com/a/26915856/4254650
-function parseV1() {
-	const int_time = this.get_time_int( uuid_str ) - 122192928000000000,
-		    int_millisec = Math.floor( int_time / 10000 );
-	return new Date( int_millisec );
-}
+//function parseV1() {
+//	const int_time = this.get_time_int( uuid_str ) - 122192928000000000,
+//		    int_millisec = Math.floor( int_time / 10000 );
+//	return new Date( int_millisec );
+//}
 
-module.exports = { generateV1: require('uuid/v1'), generateV4, parseV1 };
+module.exports = { generateV1: require('uuid/v1'), generateV4 };

@@ -19,7 +19,7 @@ class Services {
 	}
 
 	async addService(serviceName, localLocation, remoteLocation) {
-		const service = new Service(serviceName, localLocation, remoteLocation, this.defaultSettings[serviceName], this.portService);
+		const service = new Service(serviceName, localLocation, remoteLocation, this.defaultSettings[serviceName]);
 		this.services.set(serviceName, service);
 		return service;
 	}

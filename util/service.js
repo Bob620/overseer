@@ -24,7 +24,7 @@ class Service {
 
 	updateDependencies() {
 		return new Promise((resolve, reject) => {
-			if (this.commands.install === undefined || this.commands.install === '') {
+			if (this.commands.install === undefined || !this.commands.install) {
 				resolve();
 				return;
 			}

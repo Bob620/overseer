@@ -1,7 +1,7 @@
 const overseer = require('./Overseer'),
-      Log = require('./util/logger');
+      Logger = require('./util/logger');
 
-Log.on('message', log => {
+Logger.on('message', log => {
 	console.log(`[${log.name}] - ${log.message}`);
 });
 

@@ -4,7 +4,7 @@ const http = require('http');
 
 let port = '8081';
 if (process.env.NODE_ENV === 'production') {
-	port = normalizePort(process.env.PORT || '9100');
+	port = process.env.PORT ? process.env.PORT : '9100';
 }
 app.set('port', port);
 
