@@ -5,16 +5,20 @@ const portService = require('../manager/portservice'),
 const proxy = httpProxy.createProxyServer({});
 
 server = http.createServer((req, res) => {
-	switch(req.hostname) {
-		case 'localhost':
-			proxy.web(req, res, {
-				target:'localhost',
-				port: '8000'
-			});
-			break;
-		default:
-			res.writeHead(404).end();
-			break;
+	try {
+		switch (req.hostname) {
+			case 'localhost':
+				proxy.web(req, res, {
+					target: 'localhost',
+					port: '8000'
+				});
+				break;
+			default:
+				res.end('<h1 style="text-align: center;">404</h1>');
+				break;
+		}
+	} catch (err) {
+		console.log(err);
 	}
 }).listen(80);
 
