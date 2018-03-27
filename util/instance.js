@@ -1,6 +1,6 @@
 const EventEmitter = require('events');
 
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const Logger = require('./logger');
 
@@ -169,7 +169,7 @@ class Instance extends EventEmitter {
 		if (this.getStatus() === InstanceConst.status.RUNNING) {
 			if (process.platform === "win32") {
 				// This is the only working way on windows ( ￣＾￣)
-				spawn('taskkill', ['/pid', this.data.process.pid, '/f', '/t']);
+				spawnSync('taskkill', ['/pid', this.data.process.pid, '/f', '/t']);
 			} else {
 				this.data.process.kill('SIGINT');
 			}
