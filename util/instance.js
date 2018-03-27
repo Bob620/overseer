@@ -164,6 +164,18 @@ class Instance extends EventEmitter {
 		await this.bind();
 	}
 
+	async syncStop() {
+		this.setRespawn = false;
+		if (this.getStatus() === InstanceConst.status.RUNNING) {
+			if (process.platform === "win32") {
+				// This is the only working way on windows ( ￣＾￣)
+				spawn('taskkill', ['/pid', this.data.process.pid, '/f', '/t']);
+			} else {
+				this.data.process.kill('SIGINT');
+			}
+		}
+	}
+
 	async stop() {
 		this.setRespawn = false;
 		if (this.getStatus() === InstanceConst.status.RUNNING) {

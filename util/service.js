@@ -84,13 +84,26 @@ class Service {
 		return instance;
 	}
 
+	syncStop() {
+		this.log('Closing all instances...');
+		this.instances.forEach(instance => {
+			instance.syncStop();
+		});
+
+		this.log('All instances closed');
+		return true;
+	}
+
 	stop() {
+		this.log('Closing all instances...');
 		let processesToStop = [];
 		this.instances.forEach(instance => {
 			processesToStop.push(instance.stop());
 		});
 
-		return Promise.all(processesToStop);
+		return Promise.all(processesToStop).then(() => {
+			this.log('All instances closed');
+		});
 	}
 
 	getInstance(instanceId) {
