@@ -18,6 +18,20 @@ class Services {
 		return Promise.resolve(service);
 	}
 
+	searchServices(searchFunction) {
+		let matchingServices = [];
+
+		this.services.forEach(service => {
+			if (searchFunction(service)) {
+				matchingServices.push(service);
+			}
+		});
+
+		if (matchingServices.length > 0)
+			return Promise.resolve(matchingServices);
+		return Promise.reject();
+	}
+
 	async addService(serviceName, localLocation, remoteLocation) {
 		const service = new Service(serviceName, localLocation, remoteLocation, this.defaultSettings[serviceName]);
 		this.services.set(serviceName, service);
