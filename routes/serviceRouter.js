@@ -1,4 +1,4 @@
-const portService = require('../manager/portservice'),
+const services = require('../manager/services'),
       httpProxy = require('http-proxy'),
       http = require("http");
 
@@ -6,18 +6,19 @@ const proxy = httpProxy.createProxyServer({});
 
 server = http.createServer((req, res) => {
 	try {
-		switch (req.hostname) {
-			case 'localhost':
-				proxy.web(req, res, {
-					target: 'localhost',
-					port: '8000'
-				});
-				break;
-			default:
-				res.end('<h1 style="text-align: center;">404</h1>');
-				break;
-		}
+		services.searchServices(service => {
+			return service.hasHostname(req.headers.host);
+		}).then(services => {
+			proxy.web(req, res, {
+				target: `http://localhost:${services[0].listInstances()[0].getPort()}`
+			});
+		}).catch((err) => {
+			if (err)
+				console.log(err);
+			res.end('<h1 style="text-align: center;">404</h1>');
+		});
 	} catch (err) {
+		res.end('<h1 style="text-align: center;">500</h1>');
 		console.log(err);
 	}
 }).listen(80);

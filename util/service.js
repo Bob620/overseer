@@ -13,6 +13,7 @@ class Service {
 		this.serviceName = serviceName;
 		this.defaultSettings = defaultSettings;
 		this.commands = defaultSettings.commands;
+		this.hostnames = defaultSettings.hostnames ? defaultSettings.hostnames : [];
 		this.instances = new Map();
 
 		this.log = Logger.log.bind(Logger, `${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
@@ -20,6 +21,14 @@ class Service {
 		let command = defaultSettings.commands.start;
 		command = command.split(' ');
 		this.commands['start'] = {'cmd': command.shift(), 'args': command};
+	}
+
+	hasHostname(hostname) {
+		return this.hostnames.includes(hostname);
+	}
+
+	getHostnames() {
+		return this.hostnames;
 	}
 
 	updateDependencies() {

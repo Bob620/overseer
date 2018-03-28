@@ -15,7 +15,8 @@
       },
       "args": {
         "port": "-p"
-      }
+      },
+      "hostnames": []
     }
   }
 }
