@@ -7,14 +7,22 @@ const { Instance } = require('./instance'),
       portService = require('../manager/portservice');
 
 class Service {
-	constructor(serviceName, servicePath, remotePath, defaultSettings) {
-		this.servicePath = servicePath;
-		this.remotePath = remotePath;
-		this.serviceName = serviceName;
+	constructor(serviceName, servicePath, remotePath, {commands = [], args = [], hostnames = [], wsHostnames = [], defaultSettings = {}}) {
+
+		this.data = {
+			serviceName,
+			servicePath,
+			remotePath,
+			defaultInstanceSettings: defaultSettings,
+			hostnames,
+			wsHostnames,
+			instances: new Map(),
+			commands,
+			instanceArgs: args
+		};
+
 		this.defaultSettings = defaultSettings;
 		this.commands = defaultSettings.commands;
-		this.hostnames = defaultSettings.hostnames ? defaultSettings.hostnames : [];
-		this.instances = new Map();
 
 		this.log = Logger.log.bind(Logger, `${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
 
@@ -24,11 +32,62 @@ class Service {
 	}
 
 	hasHostname(hostname) {
-		return this.hostnames.includes(hostname);
+		return this.data.hostnames.includes(hostname);
+	}
+
+	hasWSHostname(hostname) {
+		return this.data.wsHostnames.includes(hostname);
 	}
 
 	getHostnames() {
-		return this.hostnames;
+		return this.data.hostnames;
+	}
+
+	getWSHostnames() {
+		return this.data.wsHostnames;
+	}
+
+	getDefaultSettings() {
+		return this.data.defaultInstanceSettings;
+	}
+
+	getCommands() {
+		return this.data.commands;
+	}
+
+	getInstance(instanceId) {
+		return this.data.instances.get(instanceId);
+	}
+
+	getInstances() {
+		return this.data.instances;
+	}
+
+	getServicePath() {
+		return this.data.servicePath;
+	}
+
+	getServiceName() {
+		return this.data.serviceName;
+	}
+
+	deleteInstance(instanceId) {
+		const instance = this.getInstance(instanceId);
+		return instance.kill().then(() => {
+			this.data.instances.delete(instanceId);
+		}).catch((err) => {
+			this.log(err);
+		});
+	}
+
+	deleteInstanceSync(instanceId) {
+		try {
+			const instance = this.getInstance(instanceId);
+			instance.killSync();
+			this.data.instances.delete(instanceId);
+		} catch(err) {
+			this.log(err);
+		}
 	}
 
 	updateDependencies() {
@@ -39,7 +98,7 @@ class Service {
 			}
 			this.log('Updating dependencies...');
 
-			exec(this.commands.install, {cwd: this.servicePath}, err => {
+			exec(this.commands.install, {cwd: this.getServicePath()}, err => {
 				if(err) reject(err);
 				this.log('Dependencies updated');
 				resolve();
@@ -52,7 +111,7 @@ class Service {
 			this.log(`Running ${command}...`);
 
 			try {
-				exec(this.commands[command], {cwd: this.servicePath}, err => {
+				exec(this.commands[command], {cwd: this.getServicePath()}, err => {
 					if(err) this.log(err);
 					this.log(`Done running ${command}`);
 					resolve();
@@ -60,16 +119,6 @@ class Service {
 			} catch(err) {
 				reject(err);
 			}
-		});
-	}
-
-	removeInstance(instanceId) {
-		const instance = this.instances.get(instanceId);
-		return instance.stop().then(() => {
-			portService.clearPort(instance.getPort());
-			this.instances.delete(instanceId);
-		}).catch((err) => {
-			this.log(err);
 		});
 	}
 
@@ -82,32 +131,33 @@ class Service {
 					throw new Error('Port unavailable');
 				}
 			} else {
-				settings.args.port = [this.defaultSettings.args.port, portService.getNextPort()];
+				settings.args.port = this.defaultSettings.args.port;
 			}
 		}
 
 		const instanceId = generateV4();
-		const instance = new Instance(instanceId, this.serviceName, this.servicePath, settings);
-		this.instances.set(instanceId, instance);
+		const instance = new Instance(instanceId, this.getServiceName(), this.getServicePath(), settings);
+		this.data.instances.set(instance.getId(), instance);
 
 		return instance;
 	}
 
-	syncStop() {
+
+	cleanupSync() {
 		this.log('Closing all instances...');
-		this.instances.forEach(instance => {
-			instance.syncStop();
+		this.getInstances().forEach((instance, instanceId) => {
+			this.deleteInstanceSync(instanceId);
 		});
 
 		this.log('All instances closed');
 		return true;
 	}
 
-	stop() {
+	cleanup() {
 		this.log('Closing all instances...');
 		let processesToStop = [];
-		this.instances.forEach(instance => {
-			processesToStop.push(instance.stop());
+		this.getInstances().forEach((instance, instanceId) => {
+			processesToStop.push(this.deleteInstance(instanceId));
 		});
 
 		return Promise.all(processesToStop).then(() => {
@@ -115,14 +165,10 @@ class Service {
 		});
 	}
 
-	getInstance(instanceId) {
-		return this.instances.get(instanceId);
-	}
-
 	listInstances() {
 		let instancesList = [];
 
-		this.instances.forEach(instance => {
+		this.getInstances().forEach(instance => {
 			instancesList.push(instance);
 		});
 
@@ -131,14 +177,14 @@ class Service {
 
 	gitPull() {
 		return new Promise((resolve, reject) => {
-			this.log(`Pulling ${this.serviceName}...`);
-			simpleGit.cwd(this.servicePath).pull((err) => {
+			this.log(`Pulling ${this.getServiceName()}...`);
+			simpleGit.cwd(this.getServicePath()).pull((err) => {
 				if (err) {
 					reject(err);
 					return;
 				}
 
-				this.log(`Pulled ${this.serviceName}`);
+				this.log(`Pulled ${this.getServiceName()}`);
 				this.updateDependencies().then(() => {
 					resolve();
 				})

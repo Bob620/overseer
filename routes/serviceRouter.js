@@ -15,44 +15,33 @@ server = http.createServer((req, res) => {
 		}).catch((err) => {
 			if (err)
 				console.log(err);
+			res.writeHead(404);
 			res.end('<h1 style="text-align: center;">404</h1>');
 		});
 	} catch (err) {
+		res.writeHead(500);
+		res.end('<h1 style="text-align: center;">500</h1>');
+		console.log(err);
+	}
+}).on('upgrade', (req, socket, head) => {
+	try {
+		services.searchServices(service => {
+			return service.hasWSHostname(req.headers.host);
+		}).then(services => {
+			proxy.ws(req, socket, head, {
+				target: `http://localhost:${services[0].listInstances()[0].getWSPort()}`
+			});
+		}).catch((err) => {
+			if (err)
+				console.log(err);
+			res.writeHead(404);
+			res.end('<h1 style="text-align: center;">404</h1>');
+		});
+	} catch (err) {
+		res.writeHead(500);
 		res.end('<h1 style="text-align: center;">500</h1>');
 		console.log(err);
 	}
 }).listen(80);
 
-
-/*
-app.use(logger('dev'));
-
-app.use(proxy('localhost', {
-	https: false,
-	memoizeHost: true,
-	preserveHostHdr: true,
-	parseReqBody: false,
-	timeout: 5000,
-	proxyReqPathResolver: req => {
-		return new Promise(function (resolve, reject) {
-			console.log(req.hostname);
-			switch(req.hostname) {
-				case 'waifubot.moe':
-					resolve(`localhost:8000${req.originalUrl}`);
-					break;
-				case 'bobco.moe':
-					resolve(`localhost:8001${req.originalUrl}`);
-					break;
-				case 'localhost':
-					console.log(`http://localhost:8000${req.originalUrl}`);
-					resolve(`http://localhost:8000${req.originalUrl}`);
-					break;
-				default:
-					reject('baka');
-					break;
-			}
-		});
-	}
-}));
-*/
 module.exports = proxy;

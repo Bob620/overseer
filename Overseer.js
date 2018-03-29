@@ -37,7 +37,7 @@ class Overseer {
 			log("Shutting down...");
 
 			this.services.services.forEach(service => {
-				service.syncStop();
+				service.cleanupSync();
 			});
 
 			process.exit();

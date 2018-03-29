@@ -2,7 +2,8 @@ const EventEmitter = require('events');
 
 const { spawn, spawnSync } = require('child_process');
 
-const Logger = require('./logger');
+const Logger = require('./logger'),
+      portService = require('../manager/portservice');
 
 const InstanceConst = {
 	"status": {
@@ -12,7 +13,7 @@ const InstanceConst = {
 };
 
 class Instance extends EventEmitter {
-	constructor(instanceId, serviceName, servicePath, settings) {
+	constructor(instanceId, serviceName, servicePath, settings, startCmd) {
 		super();
 
 		this.data = {
@@ -20,19 +21,26 @@ class Instance extends EventEmitter {
 			serviceName,
 			servicePath,
 			settings,
+			startCmd,
+			port: undefined,
+			wsPort: undefined,
 			processStatus: InstanceConst.status.STOPPED,
 			process: undefined
 		};
 
 		this.log = Logger.log.bind(Logger, instanceId.blue);
+
+		const args = this.getArgs();
+		if (args.port) {
+			this.setPort(portService.getNextPort());
+		}
+		if (args.wsport) {
+			this.setWSPort(portService.getNextPort());
+		}
 	}
 
 	getArgs() {
-		return this.data.settings.args;
-	}
-
-	getCommands() {
-		return this.data.settings.commands;
+		return this.data.args;
 	}
 
 	getId() {
@@ -40,9 +48,17 @@ class Instance extends EventEmitter {
 	}
 
 	getPort() {
-		const port = this.data.settings.args.port;
+		const port = this.data.port;
 		if (port) {
-			return port[1];
+			return port;
+		}
+		return 0;
+	}
+
+	getWSPort() {
+		const port = this.data.wsPort;
+		if (port) {
+			return port;
 		}
 		return 0;
 	}
@@ -54,14 +70,24 @@ class Instance extends EventEmitter {
 	getSerialArgs() {
 		let args = [];
 
-		if (this.getCommands().start.cmd === 'npm') {
+		if (this.data.startCmd === 'npm') {
 			args.push('--');
 		}
 
-		Object.values(this.getArgs()).forEach(argument => {
-			argument.forEach(value => {
-				args.push(value);
-			});
+		Object.entries(this.getArgs()).forEach(([argName, argument]) => {
+			switch (argName) {
+				case 'port':
+					args.push(argument, this.getPort());
+					break;
+				case 'wsPort':
+					args.push(argument, this.getWSPort());
+					break;
+				default:
+					argument.forEach(value => {
+						args.push(value);
+					});
+					break;
+			}
 		});
 
 		return args;
@@ -79,6 +105,18 @@ class Instance extends EventEmitter {
 		return this.data.processStatus
 	}
 
+
+	setStartCmd(cmd) {
+		this.data.startCmd = cmd;
+	}
+
+	setPort(port) {
+		this.data.port = port;
+	}
+
+	setWSPort(port) {
+		this.data.wsPort = port;
+	}
 
 	setRespawn(willRespawn) {
 		this.data.settings.respawn = willRespawn;
@@ -164,7 +202,7 @@ class Instance extends EventEmitter {
 		await this.bind();
 	}
 
-	async syncStop() {
+	stopSync() {
 		this.setRespawn = false;
 		if (this.getStatus() === InstanceConst.status.RUNNING) {
 			if (process.platform === "win32") {
@@ -186,6 +224,18 @@ class Instance extends EventEmitter {
 				await this.data.process.kill('SIGINT');
 			}
 		}
+	}
+
+	killSync() {
+		this.stopSync();
+		portService.clearPort(this.getPort());
+		portService.clearPort(this.getWSPort());
+	}
+
+	async kill() {
+		await this.stop();
+		portService.clearPort(this.getPort());
+		portService.clearPort(this.getWSPort());
 	}
 }
 
