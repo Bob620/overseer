@@ -5,7 +5,7 @@ const rmdir = util.promisify(fs.rmdir);
 const simpleGit = require('simple-git')();
 
 const Logger = require('../util/logger'),
-      log = Logger.log.bind(Logger, 'GitControl'.blue),
+      log = Logger.createLog('GitControl'.blue),
       services = require('./services');
 
 class GitControl {

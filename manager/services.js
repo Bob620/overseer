@@ -3,15 +3,21 @@ const Service = require('../util/service');
 
 class Services {
 	constructor() {
-		this.services = new Map();
+		this.data = {
+			services: new Map()
+		}
 	}
 
 	init(defaultSettings) {
 		this.defaultSettings = defaultSettings;
 	}
 
+	getServices() {
+		return this.data.services;
+	}
+
 	getService(serviceName) {
-		const service = this.services.get(serviceName);
+		const service = this.data.services.get(serviceName);
 		if (service === undefined) {
 			return Promise.reject();
 		}
@@ -21,7 +27,7 @@ class Services {
 	searchServices(searchFunction) {
 		let matchingServices = [];
 
-		this.services.forEach(service => {
+		this.getServices().forEach(service => {
 			if (searchFunction(service)) {
 				matchingServices.push(service);
 			}
@@ -34,12 +40,12 @@ class Services {
 
 	async addService(serviceName, localLocation, remoteLocation) {
 		const service = new Service(serviceName, localLocation, remoteLocation, this.defaultSettings[serviceName]);
-		this.services.set(serviceName, service);
+		this.data.services.set(serviceName, service);
 		return service;
 	}
 
 	async removeService(serviceName) {
-		this.services.delete(serviceName)
+		this.data.services.delete(serviceName)
 	}
 }
 

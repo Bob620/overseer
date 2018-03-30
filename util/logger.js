@@ -20,6 +20,10 @@ class Logger extends EventEmitter {
 	read(name, max=1) {
 		return this.logs[name].get(max);
 	}
+
+	createLog(name) {
+		return this.log.bind(this, name);
+	}
 }
 
 class Log {

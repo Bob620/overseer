@@ -13,24 +13,24 @@ const InstanceConst = {
 };
 
 class Instance extends EventEmitter {
-	constructor(instanceId, serviceName, servicePath, settings, startCmd) {
+	constructor(id, serviceName, servicePath, settings = {}, startCmd = '', args = []) {
 		super();
 
 		this.data = {
-			id: instanceId,
+			id,
 			serviceName,
 			servicePath,
 			settings,
 			startCmd,
+			args,
 			port: undefined,
 			wsPort: undefined,
 			processStatus: InstanceConst.status.STOPPED,
 			process: undefined
 		};
 
-		this.log = Logger.log.bind(Logger, instanceId.blue);
+		this.log = Logger.createLog(id.blue);
 
-		const args = this.getArgs();
 		if (args.port) {
 			this.setPort(portService.getNextPort());
 		}
@@ -74,7 +74,9 @@ class Instance extends EventEmitter {
 			args.push('--');
 		}
 
-		Object.entries(this.getArgs()).forEach(([argName, argument]) => {
+		Object.entries(this.getArgs()).forEach(([argName, argValue]) => {
+
+
 			switch (argName) {
 				case 'port':
 					args.push(argument, this.getPort());
@@ -103,6 +105,10 @@ class Instance extends EventEmitter {
 
 	getStatus() {
 		return this.data.processStatus
+	}
+
+	getStartCmd() {
+		return this.data.startCmd;
 	}
 
 
@@ -194,10 +200,10 @@ class Instance extends EventEmitter {
 	}
 
 	async createProcess() {
-		const startCommand = this.getCommands().start;
+		const startCmd = this.getStartCmd();
 
 		// Special spawn conditions for windows vs unix
-		this.data.process = spawn(/^win/.test(process.platform) ? `${startCommand.cmd}.cmd` : startCommand.cmd, startCommand.args.concat(this.getSerialArgs()), {cwd: this.getServicePath(), stdio: 'pipe'});
+		this.data.process = spawn(/^win/.test(process.platform) ? `${startCmd}.cmd` : startCmd, this.getSerialArgs(), {cwd: this.getServicePath(), stdio: 'pipe'});
 		this.setStatus(InstanceConst.status.RUNNING);
 		await this.bind();
 	}
@@ -205,7 +211,7 @@ class Instance extends EventEmitter {
 	stopSync() {
 		this.setRespawn = false;
 		if (this.getStatus() === InstanceConst.status.RUNNING) {
-			if (process.platform === "win32") {
+			if (/^win/.test(process.platform)) {
 				// This is the only working way on windows ( ￣＾￣)
 				spawnSync('taskkill', ['/pid', this.data.process.pid, '/f', '/t']);
 			} else {
@@ -217,7 +223,7 @@ class Instance extends EventEmitter {
 	async stop() {
 		this.setRespawn = false;
 		if (this.getStatus() === InstanceConst.status.RUNNING) {
-			if (process.platform === "win32") {
+			if (/^win/.test(process.platform)) {
 				// This is the only working way on windows ( ￣＾￣)
 				await spawn('taskkill', ['/pid', this.data.process.pid, '/f', '/t']);
 			} else {

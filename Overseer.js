@@ -2,7 +2,7 @@
 const config = require('./config/config.json');
 
 const Logger = require('./util/logger');
-const log = Logger.log.bind(Logger, 'Overseer'.yellow);
+const log = Logger.createLog('Overseer'.yellow);
 
 const app = require('./routes/serviceRouter');
 
@@ -48,7 +48,7 @@ class Overseer {
 		await this.portServices.init(config.options.ports);
 		log('PortService Initialized');
 
-		await this.services.init(config.defaultServiceSettings);
+		await this.services.init(config.services);
 		log('Services Initialized');
 
 		await this.gitControl.init(config.gitRemote);

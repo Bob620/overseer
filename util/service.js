@@ -3,52 +3,32 @@ const simpleGit = require('simple-git')(),
 	    { generateV4 } = require('./generateuuid');
 
 const { Instance } = require('./instance'),
-      Logger = require('./logger');
+      Logger = require('./logger'),
       portService = require('../manager/portservice');
 
 class Service {
-	constructor(serviceName, servicePath, remotePath, {commands = [], args = [], hostnames = [], wsHostnames = [], defaultSettings = {}}) {
+	constructor(serviceName, servicePath, remotePath, {commands = [], args = [], hostnames = [], environment = {}}) {
 
 		this.data = {
 			serviceName,
 			servicePath,
 			remotePath,
-			defaultInstanceSettings: defaultSettings,
 			hostnames,
-			wsHostnames,
-			instances: new Map(),
 			commands,
+			environment,
+			instances: new Map(),
 			instanceArgs: args
 		};
 
-		this.defaultSettings = defaultSettings;
-		this.commands = defaultSettings.commands;
-
-		this.log = Logger.log.bind(Logger, `${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
-
-		let command = defaultSettings.commands.start;
-		command = command.split(' ');
-		this.commands['start'] = {'cmd': command.shift(), 'args': command};
+		this.log = Logger.createLog(`${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
 	}
 
 	hasHostname(hostname) {
 		return this.data.hostnames.includes(hostname);
 	}
 
-	hasWSHostname(hostname) {
-		return this.data.wsHostnames.includes(hostname);
-	}
-
 	getHostnames() {
 		return this.data.hostnames;
-	}
-
-	getWSHostnames() {
-		return this.data.wsHostnames;
-	}
-
-	getDefaultSettings() {
-		return this.data.defaultInstanceSettings;
 	}
 
 	getCommands() {
