@@ -13,7 +13,7 @@ const InstanceConst = {
 };
 
 class Instance extends EventEmitter {
-	constructor(id, serviceName, servicePath, startCmd = '', args = [], environment = {}) {
+	constructor(id, serviceName, servicePath, startCmd = '', args = [], env = {}) {
 		super();
 
 		this.data = {
@@ -22,7 +22,7 @@ class Instance extends EventEmitter {
 			servicePath,
 			startCmd,
 			args,
-			environment,
+			env,
 			processStatus: InstanceConst.status.STOPPED,
 			process: undefined
 		};
@@ -36,7 +36,7 @@ class Instance extends EventEmitter {
 			this.setWSPort(portService.getNextPort());
 		}
 
-		if (Object.values(environment).length === 0) {
+		if (Object.values(env).length === 0) {
 			this.setEnvironment(process.env);
 		}
 	}
@@ -50,7 +50,7 @@ class Instance extends EventEmitter {
 	}
 
 	getEnvironment() {
-		return this.data.environment;
+		return this.data.env;
 	}
 
 	getPort() {
@@ -146,7 +146,7 @@ class Instance extends EventEmitter {
 	}
 
 	setEnvironment(env) {
-		this.data.environment = env;
+		this.data.env = env;
 	}
 
 

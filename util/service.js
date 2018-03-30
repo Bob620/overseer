@@ -3,11 +3,10 @@ const simpleGit = require('simple-git')(),
 	    { generateV4 } = require('./generateuuid');
 
 const { Instance } = require('./instance'),
-      Logger = require('./logger'),
-      portService = require('../manager/portservice');
+      Logger = require('./logger');
 
 class Service {
-	constructor(serviceName, servicePath, remotePath, {commands = [], args = [], hostnames = [], environment = {}}) {
+	constructor(serviceName, servicePath, remotePath, {commands = [], args = [], hostnames = [], env = {}}) {
 
 		this.data = {
 			serviceName,
@@ -15,7 +14,7 @@ class Service {
 			remotePath,
 			hostnames,
 			commands,
-			environment,
+			env,
 			instances: new Map(),
 			instanceArgs: args
 		};
@@ -44,7 +43,7 @@ class Service {
 	}
 
 	getEnvironment() {
-		return this.data.environment
+		return this.data.env
 	}
 
 	getInstance(instanceId) {
