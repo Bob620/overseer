@@ -13,22 +13,22 @@ class Overseer {
 		this.gitControl = require('./manager/gitcontrol');
 		this.server = app;
 		this.closing = false;
-		/*
-				process.stdin.resume();
 
-		// do something when app is closing
-				process.on('exit', this.exitHandler.bind(this));
+		process.stdin.resume();
 
-		// catches ctrl+c event
-				process.on('SIGINT', this.exitHandler.bind(this));
+// do something when app is closing
+		process.on('exit', this.exitHandler.bind(this));
 
-		// catches "kill pid"
-				process.on('SIGUSR1', this.exitHandler.bind(this));
-				process.on('SIGUSR2', this.exitHandler.bind(this));
-				process.on('SIGTERM', this.exitHandler.bind(this));
+// catches ctrl+c event
+		process.on('SIGINT', this.exitHandler.bind(this));
 
-		// catches uncaught exceptions
-				process.on('uncaughtException', this.exitHandler.bind(this));*/
+// catches "kill pid"
+		process.on('SIGUSR1', this.exitHandler.bind(this));
+		process.on('SIGUSR2', this.exitHandler.bind(this));
+		process.on('SIGTERM', this.exitHandler.bind(this));
+
+// catches uncaught exceptions
+		process.on('uncaughtException', this.exitHandler.bind(this));
 	}
 
 	exitHandler() {
@@ -36,7 +36,7 @@ class Overseer {
 			this.closing = true;
 			log("Shutting down...");
 
-			this.services.services.forEach(service => {
+			this.services.getServices().forEach(service => {
 				service.cleanupSync();
 			});
 
