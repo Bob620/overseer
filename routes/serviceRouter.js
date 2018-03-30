@@ -15,31 +15,29 @@ server = http.createServer((req, res) => {
 		}).catch((err) => {
 			if (err)
 				console.log(err);
-			res.writeHead(404);
+			res.writeHead(404, {'Content-Type': 'text/html; charset=utf-8'});
 			res.end('<h1 style="text-align: center;">404</h1>');
 		});
 	} catch (err) {
-		res.writeHead(500);
+		res.writeHead(500, {'Content-Type': 'text/html; charset=utf-8'});
 		res.end('<h1 style="text-align: center;">500</h1>');
 		console.log(err);
 	}
 }).on('upgrade', (req, socket, head) => {
 	try {
 		services.searchServices(service => {
-			return service.hasWSHostname(req.headers.host);
+			return service.hasHostname(req.headers.host);
 		}).then(services => {
 			proxy.ws(req, socket, head, {
-				target: `http://localhost:${services[0].listInstances()[0].getWSPort()}`
+				target: `ws://localhost:${services[0].listInstances()[0].getWSPort()}`
 			});
 		}).catch((err) => {
 			if (err)
 				console.log(err);
-			res.writeHead(404);
-			res.end('<h1 style="text-align: center;">404</h1>');
+			socket.end()
 		});
 	} catch (err) {
-		res.writeHead(500);
-		res.end('<h1 style="text-align: center;">500</h1>');
+		socket.end();
 		console.log(err);
 	}
 }).listen(80);
