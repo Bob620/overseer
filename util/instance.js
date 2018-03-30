@@ -13,29 +13,31 @@ const InstanceConst = {
 };
 
 class Instance extends EventEmitter {
-	constructor(id, serviceName, servicePath, settings = {}, startCmd = '', args = []) {
+	constructor(id, serviceName, servicePath, startCmd = '', args = [], environment = {}) {
 		super();
 
 		this.data = {
 			id,
 			serviceName,
 			servicePath,
-			settings,
 			startCmd,
 			args,
-			port: undefined,
-			wsPort: undefined,
+			environment,
 			processStatus: InstanceConst.status.STOPPED,
 			process: undefined
 		};
 
 		this.log = Logger.createLog(id.blue);
 
-		if (args.port) {
+		if (args.port && args.port[1].length === 1) {
 			this.setPort(portService.getNextPort());
 		}
-		if (args.wsport) {
+		if (args.wsport && args.wsport[1].length === 1) {
 			this.setWSPort(portService.getNextPort());
+		}
+
+		if (Object.values(environment).length === 0) {
+			this.setEnvironment(process.env);
 		}
 	}
 
@@ -47,18 +49,26 @@ class Instance extends EventEmitter {
 		return this.data.id;
 	}
 
+	getEnvironment() {
+		return this.data.environment;
+	}
+
 	getPort() {
-		const port = this.data.port;
-		if (port) {
-			return port;
+		if (this.data.args.port) {
+			const port = this.data.args.port[1][1];
+			if (port) {
+				return port;
+			}
 		}
 		return 0;
 	}
 
 	getWSPort() {
-		const port = this.data.wsPort;
-		if (port) {
-			return port;
+		if (this.data.args.wsport) {
+			const port = this.data.args.wsport[1][1];
+			if (port) {
+				return port;
+			}
 		}
 		return 0;
 	}
@@ -70,26 +80,12 @@ class Instance extends EventEmitter {
 	getSerialArgs() {
 		let args = [];
 
-		if (this.data.startCmd === 'npm') {
+		if (this.getStartCmd().startsWith('npm')) {
 			args.push('--');
 		}
 
-		Object.entries(this.getArgs()).forEach(([argName, argValue]) => {
-
-
-			switch (argName) {
-				case 'port':
-					args.push(argument, this.getPort());
-					break;
-				case 'wsPort':
-					args.push(argument, this.getWSPort());
-					break;
-				default:
-					argument.forEach(value => {
-						args.push(value);
-					});
-					break;
-			}
+		Object.values(this.getArgs()).forEach(([argName, argValue]) => {
+			args = args.concat(argValue);
 		});
 
 		return args;
@@ -111,17 +107,23 @@ class Instance extends EventEmitter {
 		return this.data.startCmd;
 	}
 
+	getSerialStartCmd() {
+		return this.data.startCmd.split(' ');
+	}
+
 
 	setStartCmd(cmd) {
 		this.data.startCmd = cmd;
 	}
 
 	setPort(port) {
-		this.data.port = port;
+		if (this.data.args.port)
+			this.data.args.port[1][1] = port;
 	}
 
 	setWSPort(port) {
-		this.data.wsPort = port;
+		if (this.data.args.wsport)
+			this.data.args.wsPort[1][1] = port;
 	}
 
 	setRespawn(willRespawn) {
@@ -141,6 +143,10 @@ class Instance extends EventEmitter {
 					break;
 			}
 		}
+	}
+
+	setEnvironment(env) {
+		this.data.environment = env;
 	}
 
 
@@ -200,10 +206,10 @@ class Instance extends EventEmitter {
 	}
 
 	async createProcess() {
-		const startCmd = this.getStartCmd();
+		const [startCmd, ...startArgs] = this.getSerialStartCmd();
 
 		// Special spawn conditions for windows vs unix
-		this.data.process = spawn(/^win/.test(process.platform) ? `${startCmd}.cmd` : startCmd, this.getSerialArgs(), {cwd: this.getServicePath(), stdio: 'pipe'});
+		this.data.process = spawn(/^win/.test(process.platform) ? `${startCmd}.cmd` : startCmd, startArgs.concat(this.getSerialArgs()), {cwd: this.getServicePath(), stdio: 'pipe', env: this.getEnvironment()});
 		this.setStatus(InstanceConst.status.RUNNING);
 		await this.bind();
 	}

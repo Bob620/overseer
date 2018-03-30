@@ -6,7 +6,13 @@
   "options": {
     "ports": [8000, 9000]
   },
-  "defaultServiceSettings": {
+  "ssl": {
+    "test.waifubot.moe": {
+      "public": "test",
+      "private": "test"
+    }
+  },
+  "services": {
     "author/repo": {
       "commands": {
         "start": "npm start",

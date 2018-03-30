@@ -27,12 +27,24 @@ class Service {
 		return this.data.hostnames.includes(hostname);
 	}
 
+	hasArg(argName) {
+		return !!this.getArgs()[argName];
+	}
+
 	getHostnames() {
 		return this.data.hostnames;
 	}
 
 	getCommands() {
 		return this.data.commands;
+	}
+
+	getCommand(commandName) {
+		return this.data.commands[commandName];
+	}
+
+	getEnvironment() {
+		return this.data.environment
 	}
 
 	getInstance(instanceId) {
@@ -49,6 +61,14 @@ class Service {
 
 	getServiceName() {
 		return this.data.serviceName;
+	}
+
+	getArg(argName) {
+		return this.data.instanceArgs[argName];
+	}
+
+	getArgs() {
+		return this.data.instanceArgs;
 	}
 
 	deleteInstance(instanceId) {
@@ -71,53 +91,54 @@ class Service {
 	}
 
 	updateDependencies() {
-		return new Promise((resolve, reject) => {
-			if (this.commands.install === undefined || !this.commands.install) {
-				resolve();
-				return;
-			}
-			this.log('Updating dependencies...');
-
-			exec(this.commands.install, {cwd: this.getServicePath()}, err => {
-				if(err) reject(err);
-				this.log('Dependencies updated');
-				resolve();
-			});
-		});
+		return this.runCommand('install');
 	}
 
-	runCommand(command) {
+	runCommand(commandName) {
 		return new Promise((resolve, reject) => {
-			this.log(`Running ${command}...`);
+			this.log(`Running ${commandName}...`);
 
 			try {
-				exec(this.commands[command], {cwd: this.getServicePath()}, err => {
-					if(err) this.log(err);
-					this.log(`Done running ${command}`);
-					resolve();
-				});
+				const command = this.getCommand(commandName);
+				if (command) {
+					exec(command, {cwd: this.getServicePath()}, err => {
+						if (err) this.log(err);
+						this.log(`Finished ${commandName}`);
+						resolve();
+					});
+				} else {
+					this.log(`Unable to run ${commandName}`);
+					reject('Command not found');
+				}
 			} catch(err) {
 				reject(err);
 			}
 		});
 	}
 
-	async createInstance(userSettings=this.defaultSettings) {
-		let settings = JSON.parse(JSON.stringify(userSettings));
+	async createInstance(userSettings={}) {
+		let args = [];
 
-		if (this.defaultSettings.args.port) {
-			if (userSettings.port) {
-				if (!portService.isAvailable(userSettings.port)) {
-					throw new Error('Port unavailable');
+		if (userSettings.args) {
+			userSettings.args.forEach(([argName, argValue]) => {
+				if (this.hasArg(argName)) {
+					args.push([argName, [this.getArg(argName), argValue]]);
 				}
-			} else {
-				settings.args.port = this.defaultSettings.args.port;
-			}
+			});
+		}
+
+		const defaultArgs = this.getArgs();
+
+		if (defaultArgs.port && args.port === undefined) {
+			args.port = ['port', [defaultArgs.port]];
+		}
+		if (defaultArgs.wsport && args.wsport === undefined) {
+			args.wsport = ['wsport', [defaultArgs.wsport]];
 		}
 
 		const instanceId = generateV4();
-		const instance = new Instance(instanceId, this.getServiceName(), this.getServicePath(), settings);
-		this.data.instances.set(instance.getId(), instance);
+		const instance = new Instance(instanceId, this.getServiceName(), this.getServicePath(), this.getCommand('start'), args, this.getEnvironment());
+		this.data.instances.set(instanceId, instance);
 
 		return instance;
 	}
