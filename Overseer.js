@@ -4,14 +4,14 @@ const config = require('./config/config.json');
 const Logger = require('./util/logger');
 const log = Logger.createLog('Overseer'.yellow);
 
-const app = require('./routes/serviceRouter');
+const proxy = require('./manager/proxy');
 
 class Overseer {
 	constructor() {
-		this.portServices = require('./manager/portservice');
+		this.portService = require('./manager/portservice');
 		this.services = require('./manager/services');
 		this.gitControl = require('./manager/gitcontrol');
-		this.server = app;
+		this.proxy = proxy;
 		this.closing = false;
 
 		process.stdin.resume();
@@ -45,7 +45,7 @@ class Overseer {
 	}
 
 	async init() {
-		await this.portServices.init(config.options.ports);
+		await this.portService.init(config.options.internal);
 		log('PortService Initialized');
 
 		await this.services.init(config.services);
@@ -54,10 +54,10 @@ class Overseer {
 		await this.gitControl.init(config.gitRemote);
 		log('GitControl Initialized');
 
-		//		this.server.listen(80);
-		log('Service Router Initialized on port 80');
+		await this.proxy.init(config.options.proxy);
+		log('Proxy Initialized');
 
-		log('Running Overseer...');
+		log('Overseer running');
 	}
 }
 

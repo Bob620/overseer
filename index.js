@@ -6,13 +6,20 @@ Logger.on('message', log => {
 });
 
 overseer.init().then(async () => {
-	//		const waifusite = await this.gitControl.getNewestRepo('bob620/waifusite');
-
+//	const bobcosite = await overseer.gitControl.getNewestRepo('bob620/bobco');
+	const bobcosite = await overseer.services.getService('bob620/bobco');
 	const waifusite = await overseer.services.getService('bob620/waifusite');
-	const instance = await waifusite.createInstance();
 
-	//		waifusite.runCommand('build');
-	instance.start();
+	const bobcoInstance = await bobcosite.createInstance();
+	const waifusiteInstance = await waifusite.createInstance();
+
+	bobcoInstance.setRespawn(true);
+	waifusiteInstance.setRespawn(true);
+
+//	waifusite.runCommand('build');
+//	bobcosite.runCommand('build');
+	bobcoInstance.start();
+	waifusiteInstance.start();
 }).catch((err) => {
 	console.log(err);
 });

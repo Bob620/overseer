@@ -29,6 +29,7 @@
     "kagi": "github:toka-io/kagi",
     "morgan": "^1.9.0",
     "pug": "^2.0.1",
+    "redbird": "^0.7.0",
     "simple-git": "^1.92.0",
     "uuid": "^3.2.1"
   }
