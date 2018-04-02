@@ -6,13 +6,12 @@ const { Instance } = require('./instance'),
       Logger = require('./logger');
 
 class Service {
-	constructor(serviceName, servicePath, remotePath, {commands = [], args = [], hostnames = [], env = {}}) {
+	constructor(serviceName, servicePath, remotePath, {commands = [], args = [], env = {}}) {
 
 		this.data = {
 			serviceName,
 			servicePath,
 			remotePath,
-			hostnames,
 			commands,
 			env,
 			instances: new Map(),
@@ -22,16 +21,8 @@ class Service {
 		this.log = Logger.createLog(`${serviceName.split('/')[0].blue}/${serviceName.split('/')[1].green}`);
 	}
 
-	hasHostname(hostname) {
-		return this.data.hostnames.includes(hostname);
-	}
-
 	hasArg(argName) {
 		return !!this.getArgs()[argName];
-	}
-
-	getHostnames() {
-		return this.data.hostnames;
 	}
 
 	getCommands() {

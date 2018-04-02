@@ -3,7 +3,8 @@ const EventEmitter = require('events');
 const { spawn, spawnSync } = require('child_process');
 
 const Logger = require('./logger'),
-      portService = require('../manager/portservice');
+      portService = require('../manager/portservice'),
+      proxy = require('../manager/proxy');
 
 const InstanceConst = {
 	"status": {
@@ -23,6 +24,7 @@ class Instance extends EventEmitter {
 			startCmd,
 			args,
 			env,
+			respawn: false,
 			processStatus: InstanceConst.status.STOPPED,
 			process: undefined
 		};
@@ -30,10 +32,12 @@ class Instance extends EventEmitter {
 		this.log = Logger.createLog(id.blue);
 
 		if (args.port && args.port[1].length === 1) {
-			this.setPort(portService.getNextPort());
+			const port = portService.getNextPort();
+			this.data.args.port[1][1] = port;
+			proxy.addServicePort(this.getServiceName(), port);
 		}
 		if (args.wsport && args.wsport[1].length === 1) {
-			this.setWSPort(portService.getNextPort());
+			this.data.args.wsport[1][1] = portService.getNextPort();
 		}
 
 		if (Object.values(env).length === 0) {
@@ -74,7 +78,7 @@ class Instance extends EventEmitter {
 	}
 
 	getRespawn() {
-		return this.data.settings.respawn;
+		return this.data.respawn;
 	}
 
 	getSerialArgs() {
@@ -116,18 +120,8 @@ class Instance extends EventEmitter {
 		this.data.startCmd = cmd;
 	}
 
-	setPort(port) {
-		if (this.data.args.port)
-			this.data.args.port[1][1] = port;
-	}
-
-	setWSPort(port) {
-		if (this.data.args.wsport)
-			this.data.args.wsPort[1][1] = port;
-	}
-
 	setRespawn(willRespawn) {
-		this.data.settings.respawn = willRespawn;
+		this.data.respawn = willRespawn;
 	}
 
 	setStatus(newStatus) {
@@ -171,7 +165,7 @@ class Instance extends EventEmitter {
 			this.log(`Closed with code ${code} from signal ${signal}`);
 			this.setStatus(InstanceConst.status.STOPPED);
 
-			if (this.getRespawn) {
+			if (this.getRespawn()) {
 				this.log(`Restarting automatically`);
 				await this.createProcess();
 			} else {
