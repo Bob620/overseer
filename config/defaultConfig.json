@@ -4,12 +4,14 @@
     "password": ""
   },
   "options": {
-    "ports": [8000, 9000]
-  },
-  "ssl": {
-    "test.waifubot.moe": {
-      "public": "test",
-      "private": "test"
+    "internal": {
+      "portRange": [8000, 9000]
+    },
+    "proxy": {
+      "port": 80,
+      "hostnames": [
+        {"domain": "localhost", "secure": false, "service": "author/repo"}
+      ]
     }
   },
   "services": {
@@ -22,10 +24,7 @@
       "args": {
         "port": "-p"
       },
-      "env": {
-
-      },
-      "hostnames": []
+      "env": {}
     }
   }
 }

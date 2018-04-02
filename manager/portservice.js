@@ -9,8 +9,9 @@ class PortService {
 	}
 
 	init(config) {
-		this.setMinPort(config[0]);
-		this.setMaxPort(config[1]);
+		this.setMinPort(config.portRange[0]);
+		this.setMaxPort(config.portRange[1]);
+		this.data.nextPort = config.portRange[0];
 	}
 
 	getMinPort() {

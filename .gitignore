@@ -65,3 +65,6 @@ config/config.json
 
 # webstorm things
 .idea
+
+# Ignore ssl certificates
+/manager/certs
