@@ -21,7 +21,8 @@ class Proxy {
 				port: portService.getNextPort()
 			},
 			ssl: {
-				port: 443
+				port: 443,
+				http2: true
 			},
 			bunyan: false
 		});
