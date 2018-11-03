@@ -26,10 +26,10 @@
     "express-http-proxy": "^1.1.0",
     "http-proxy": "^1.16.2",
     "joi": "^13.1.2",
-    "kagi": "github:toka-io/kagi",
     "morgan": "^1.9.0",
     "pug": "^2.0.1",
-    "redbird": "^0.7.0",
+    "kagi": "github:toka-io/kagi",
+    "redbird": "^0.8.0",
     "simple-git": "^1.92.0",
     "uuid": "^3.2.1"
   }

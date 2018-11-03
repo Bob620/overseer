@@ -68,3 +68,4 @@ config/config.json
 
 # Ignore ssl certificates
 /manager/certs
+/certs
