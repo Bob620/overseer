@@ -5,7 +5,7 @@ const Greenlock = require('greenlock');
 const http01 = require('le-challenge-fs').create({ webrootPath: '/tmp/acme-challenges' });
 
 const production = false;
-const testEmail = 'bruder.lkraft225@gmail.com';
+const testEmail = 'bruder.kraft225@gmail.com';
 
 const greenlock = Greenlock.create({
 	version: 'draft-12',
@@ -15,8 +15,8 @@ const greenlock = Greenlock.create({
 		webrootPath: '/tmp/acme-challenges'
 	}),
 	approveDomains: (opts, certs, cb) => {
-		opts.challenges = { 'http-01': http01 };
-		opts.challengeType = 'http-01';
+		opts.challenges = { 'tls-sni-01': http01 };
+		opts.challengeType = 'tls-sni-01';
 
 		if (certs)
 			opts.domains = certs.altnames;
@@ -30,7 +30,11 @@ const greenlock = Greenlock.create({
 });
 
 require('http').createServer(greenlock.middleware(require('redirect-https')())).listen(80, function () {
-	console.log("Listening for ACME http-01 challenges on", this.address());
+	console.log("Listening for ACME tls-sni-01 challenges on", this.address());
+});
+
+greenlock.register({
+	domains: ['']
 });
 
 

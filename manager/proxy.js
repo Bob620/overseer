@@ -23,7 +23,10 @@ class Proxy {
 			ssl: {
 				port: 443
 			},
-			bunyan: false
+			bunyan: false,
+			handleWsUpgrade: proxy => {
+				
+			}
 		});
 		hostnames.forEach(({domain, service: serviceName, ssl: secure}) => {
 			this.addHostname(domain, serviceName, secure);
