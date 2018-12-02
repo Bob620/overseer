@@ -32,5 +32,11 @@
     "redbird": "^0.8.0",
     "simple-git": "^1.106.0",
     "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "greenlock": "latest",
+    "le-challenge-fs": "latest",
+    "le-store-certbot": "latest",
+    "redirect-https": "^1.3.0"
   }
 }
